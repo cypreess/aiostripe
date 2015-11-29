@@ -5,8 +5,8 @@ from stripe.test.helper import (
 
 
 class PlanTest(StripeResourceTest):
-    def test_create_plan(self):
-        stripe.Plan.create(**DUMMY_PLAN)
+    async def test_create_plan(self):
+        await stripe.Plan.create(**DUMMY_PLAN)
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -15,9 +15,9 @@ class PlanTest(StripeResourceTest):
             None
         )
 
-    def test_delete_plan(self):
+    async def test_delete_plan(self):
         p = stripe.Plan(id="pl_delete")
-        p.delete()
+        await p.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -26,10 +26,10 @@ class PlanTest(StripeResourceTest):
             None
         )
 
-    def test_update_plan(self):
+    async def test_update_plan(self):
         p = stripe.Plan(id="pl_update")
         p.name = "Plan Name"
-        p.save()
+        await p.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',

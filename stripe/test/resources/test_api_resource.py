@@ -5,13 +5,13 @@ from stripe.test.helper import (
 
 
 class APIResourceTests(StripeApiTestCase):
-    def test_retrieve_and_refresh(self):
+    async def test_retrieve_and_refresh(self):
         self.mock_response({
             'id': 'foo2',
             'bobble': 'scrobble',
         })
 
-        res = MyResource.retrieve('foo*', myparam=5)
+        res = await MyResource.retrieve('foo*', myparam=5)
 
         url = '/v1/myresources/foo%2A'
         self.requestor_mock.request.assert_called_with(
@@ -26,7 +26,7 @@ class APIResourceTests(StripeApiTestCase):
             'frobble': 5,
         })
 
-        res = res.refresh()
+        res = await res.refresh()
 
         url = '/v1/myresources/foo2'
         self.requestor_mock.request.assert_called_with(
@@ -72,11 +72,11 @@ class APIResourceTests(StripeApiTestCase):
 
 
 class SingletonAPIResourceTests(StripeApiTestCase):
-    def test_retrieve(self):
+    async def test_retrieve(self):
         self.mock_response({
             'single': 'ton'
         })
-        res = MySingleton.retrieve()
+        res = await MySingleton.retrieve()
 
         self.requestor_mock.request.assert_called_with(
             'get', '/v1/mysingleton', {}, None)

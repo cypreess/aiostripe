@@ -11,7 +11,7 @@ from distutils.command.build_py import build_py
 path, script = os.path.split(sys.argv[0])
 os.chdir(os.path.abspath(path))
 
-install_requires = ['requests >= 0.8.8', 'asyncio >= 3.4.3', 'aiohttp >= 0.19']
+install_requires = ['asyncio >= 3.4.3', 'aiohttp >= 0.19']
 
 with open('LONG_DESCRIPTION.rst') as f:
     long_description = f.read()

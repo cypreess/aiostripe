@@ -8,16 +8,16 @@ from stripe.test.helper import (
 
 
 class CustomerTest(StripeResourceTest):
-    def test_list_customers(self):
-        stripe.Customer.all()
+    async def test_list_customers(self):
+        await stripe.Customer.list()
         self.requestor_mock.request.assert_called_with(
             'get',
             '/v1/customers',
             {},
         )
 
-    def test_create_customer(self):
-        stripe.Customer.create(description="foo bar", card=DUMMY_CARD,
+    async def test_create_customer(self):
+        await stripe.Customer.create(description="foo bar", card=DUMMY_CARD,
                                coupon='cu_discount', idempotency_key='foo')
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -30,10 +30,10 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_unset_description(self):
+    async def test_unset_description(self):
         customer = stripe.Customer(id="cus_unset_desc")
         customer.description = "Hey"
-        customer.save(idempotency_key='foo')
+        await customer.save(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -44,12 +44,12 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_del_coupon(self):
+    async def test_del_coupon(self):
         customer = stripe.Customer(id="cus_unset_desc")
         customer.description = "bar"
         customer.coupon = "foo"
         del customer.coupon
-        customer.save()
+        await customer.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -64,7 +64,7 @@ class CustomerTest(StripeResourceTest):
         customer = stripe.Customer()
         self.assertRaises(ValueError, setattr, customer, "description", "")
 
-    def test_customer_add_card(self):
+    async def test_customer_add_card(self):
         customer = stripe.Customer.construct_from({
             'id': 'cus_add_card',
             'sources': {
@@ -72,7 +72,7 @@ class CustomerTest(StripeResourceTest):
                 'url': '/v1/customers/cus_add_card/sources',
             },
         }, 'api_key')
-        customer.sources.create(card=DUMMY_CARD, idempotency_key='foo')
+        await customer.sources.create(card=DUMMY_CARD, idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -83,7 +83,7 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_customer_add_source(self):
+    async def test_customer_add_source(self):
         customer = stripe.Customer.construct_from({
             'id': 'cus_add_source',
             'sources': {
@@ -91,7 +91,7 @@ class CustomerTest(StripeResourceTest):
                 'url': '/v1/customers/cus_add_source/sources',
             },
         }, 'api_key')
-        customer.sources.create(source=DUMMY_CARD, idempotency_key='foo')
+        await customer.sources.create(source=DUMMY_CARD, idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -102,13 +102,13 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_customer_update_card(self):
+    async def test_customer_update_card(self):
         card = stripe.Card.construct_from({
             'customer': 'cus_update_card',
             'id': 'ca_update_card',
         }, 'api_key')
         card.name = 'The Best'
-        card.save(idempotency_key='foo')
+        await card.save(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -119,13 +119,13 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_customer_update_source(self):
+    async def test_customer_update_source(self):
         source = stripe.BitcoinReceiver.construct_from({
             'customer': 'cus_update_source',
             'id': 'btcrcv_update_source',
         }, 'api_key')
         source.name = 'The Best'
-        source.save(idempotency_key='foo')
+        await source.save(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -136,12 +136,12 @@ class CustomerTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_customer_delete_card(self):
+    async def test_customer_delete_card(self):
         card = stripe.Card.construct_from({
             'customer': 'cus_delete_card',
             'id': 'ca_delete_card',
         }, 'api_key')
-        card.delete()
+        await card.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -150,12 +150,12 @@ class CustomerTest(StripeResourceTest):
             None
         )
 
-    def test_customer_delete_source(self):
+    async def test_customer_delete_source(self):
         source = stripe.BitcoinReceiver.construct_from({
             'customer': 'cus_delete_source',
             'id': 'btcrcv_delete_source',
         }, 'api_key')
-        source.delete()
+        await source.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -164,12 +164,12 @@ class CustomerTest(StripeResourceTest):
             None
         )
 
-    def test_customer_delete_bank_account(self):
+    async def test_customer_delete_bank_account(self):
         source = stripe.BankAccount.construct_from({
             'customer': 'cus_delete_source',
             'id': 'ba_delete_source',
         }, 'api_key')
-        source.delete()
+        await source.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -178,12 +178,12 @@ class CustomerTest(StripeResourceTest):
             None
         )
 
-    def test_customer_verify_bank_account(self):
+    async def test_customer_verify_bank_account(self):
         source = stripe.BankAccount.construct_from({
             'customer': 'cus_verify_source',
             'id': 'ba_verify_source',
         }, 'api_key')
-        source.verify()
+        await source.verify()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -194,8 +194,8 @@ class CustomerTest(StripeResourceTest):
 
 
 class CustomerPlanTest(StripeResourceTest):
-    def test_create_customer(self):
-        stripe.Customer.create(plan=DUMMY_PLAN['id'], card=DUMMY_CARD)
+    async def test_create_customer(self):
+        await stripe.Customer.create(plan=DUMMY_PLAN['id'], card=DUMMY_CARD)
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -207,9 +207,9 @@ class CustomerPlanTest(StripeResourceTest):
             None
         )
 
-    def test_legacy_update_subscription(self):
+    async def test_legacy_update_subscription(self):
         customer = stripe.Customer(id="cus_legacy_sub_update")
-        customer.update_subscription(idempotency_key='foo',
+        await customer.update_subscription(idempotency_key='foo',
                                      plan=DUMMY_PLAN['id'])
 
         self.requestor_mock.request.assert_called_with(
@@ -221,9 +221,9 @@ class CustomerPlanTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'}
         )
 
-    def test_legacy_delete_subscription(self):
+    async def test_legacy_delete_subscription(self):
         customer = stripe.Customer(id="cus_legacy_sub_delete")
-        customer.cancel_subscription()
+        await customer.cancel_subscription()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -232,7 +232,7 @@ class CustomerPlanTest(StripeResourceTest):
             None
         )
 
-    def test_create_customer_subscription(self):
+    async def test_create_customer_subscription(self):
         customer = stripe.Customer.construct_from({
             'id': 'cus_sub_create',
             'subscriptions': {
@@ -241,7 +241,7 @@ class CustomerPlanTest(StripeResourceTest):
             }
         }, 'api_key')
 
-        customer.subscriptions.create(plan=DUMMY_PLAN['id'], coupon='foo')
+        await customer.subscriptions.create(plan=DUMMY_PLAN['id'], coupon='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -253,7 +253,7 @@ class CustomerPlanTest(StripeResourceTest):
             None
         )
 
-    def test_retrieve_customer_subscription(self):
+    async def test_retrieve_customer_subscription(self):
         customer = stripe.Customer.construct_from({
             'id': 'cus_foo',
             'subscriptions': {
@@ -262,7 +262,7 @@ class CustomerPlanTest(StripeResourceTest):
             }
         }, 'api_key')
 
-        customer.subscriptions.retrieve('sub_cus')
+        await customer.subscriptions.retrieve('sub_cus')
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -271,7 +271,7 @@ class CustomerPlanTest(StripeResourceTest):
             None
         )
 
-    def test_update_customer_subscription(self):
+    async def test_update_customer_subscription(self):
         subscription = stripe.Subscription.construct_from({
             'id': "sub_update",
             'customer': "cus_foo",
@@ -282,7 +282,7 @@ class CustomerPlanTest(StripeResourceTest):
 
         subscription.trial_end = trial_end_int
         subscription.plan = DUMMY_PLAN['id']
-        subscription.save()
+        await subscription.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -294,13 +294,13 @@ class CustomerPlanTest(StripeResourceTest):
             None
         )
 
-    def test_delete_customer_subscription(self):
+    async def test_delete_customer_subscription(self):
         subscription = stripe.Subscription.construct_from({
             'id': "sub_delete",
             'customer': "cus_foo",
         }, 'api_key')
 
-        subscription.delete()
+        await subscription.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',

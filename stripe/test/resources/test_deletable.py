@@ -4,7 +4,7 @@ from stripe.test.helper import (
 
 
 class DeletableAPIResourceTests(StripeApiTestCase):
-    def test_delete(self):
+    async def test_delete(self):
         self.mock_response({
             'id': 'mid',
             'deleted': True,
@@ -14,7 +14,7 @@ class DeletableAPIResourceTests(StripeApiTestCase):
             'id': 'mid'
         }, 'mykey')
 
-        self.assertTrue(obj is obj.delete())
+        self.assertTrue(obj is await obj.delete())
 
         self.assertEqual(True, obj.deleted)
         self.assertEqual('mid', obj.id)

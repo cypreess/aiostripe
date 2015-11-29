@@ -22,17 +22,17 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             }
         }, 'mykey')
 
-    def checkSave(self):
-        self.assertTrue(self.obj is self.obj.save())
+    async def checkSave(self):
+        self.assertTrue(self.obj is await self.obj.save())
 
         self.assertEqual('it', self.obj.thats)
         # TODO: Should we force id to be retained?
         # self.assertEqual('myid', obj.id)
         self.assertRaises(AttributeError, getattr, self.obj, 'baz')
 
-    def test_idempotent_save(self):
+    async def test_idempotent_save(self):
         self.obj.baz = 'updated'
-        self.obj.save(idempotency_key='foo')
+        await self.obj.save(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -46,14 +46,14 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             },
         )
 
-    def test_save(self):
+    async def test_save(self):
         self.obj.baz = 'updated'
         self.obj.other = 'newval'
         self.obj.metadata.size = 'm'
         self.obj.metadata.info = 'a2'
         self.obj.metadata.height = None
 
-        self.checkSave()
+        await self.checkSave()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -70,7 +70,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_add_key_to_nested_object(self):
+    async def test_add_key_to_nested_object(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -82,7 +82,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
 
         acct.legal_entity['first_name'] = 'bob'
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -95,7 +95,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_save_nothing(self):
+    async def test_save_nothing(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'metadata': {
@@ -103,10 +103,10 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             }
         }, 'mykey')
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
         self.requestor_mock.request.assert_not_called()
 
-    def test_replace_nested_object(self):
+    async def test_replace_nested_object(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -118,7 +118,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             'first_name': 'bob',
         }
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -132,7 +132,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_array_setting(self):
+    async def test_array_setting(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {}
@@ -140,7 +140,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
 
         acct.legal_entity.additional_owners = [{'first_name': 'Bob'}]
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -155,7 +155,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_array_none(self):
+    async def test_array_none(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -165,7 +165,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
 
         acct.foo = 'bar'
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -177,7 +177,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_array_insertion(self):
+    async def test_array_insertion(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -187,7 +187,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
 
         acct.legal_entity.additional_owners.append({'first_name': 'Bob'})
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -202,7 +202,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_array_update(self):
+    async def test_array_update(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -215,7 +215,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
 
         acct.legal_entity.additional_owners[1].first_name = 'Janet'
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -231,7 +231,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_array_noop(self):
+    async def test_array_noop(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -240,7 +240,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             'currencies_supported': ['usd', 'cad']
         }, 'mykey')
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -251,7 +251,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_hash_noop(self):
+    async def test_hash_noop(self):
         acct = MyUpdateable.construct_from({
             'id': 'myid',
             'legal_entity': {
@@ -259,7 +259,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             }
         }, 'mykey')
 
-        self.assertTrue(acct is acct.save())
+        self.assertTrue(acct is await acct.save())
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -268,12 +268,12 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_save_replace_metadata_with_number(self):
+    async def test_save_replace_metadata_with_number(self):
         self.obj.baz = 'updated'
         self.obj.other = 'newval'
         self.obj.metadata = 3
 
-        self.checkSave()
+        await self.checkSave()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -286,9 +286,9 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_save_overwrite_metadata(self):
+    async def test_save_overwrite_metadata(self):
         self.obj.metadata = {}
-        self.checkSave()
+        await self.checkSave()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -303,7 +303,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_save_replace_metadata(self):
+    async def test_save_replace_metadata(self):
         self.obj.baz = 'updated'
         self.obj.other = 'newval'
         self.obj.metadata = {
@@ -312,7 +312,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             'score': 4,
         }
 
-        self.checkSave()
+        await self.checkSave()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -330,7 +330,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             None
         )
 
-    def test_save_update_metadata(self):
+    async def test_save_update_metadata(self):
         self.obj.baz = 'updated'
         self.obj.other = 'newval'
         self.obj.metadata.update({
@@ -339,7 +339,7 @@ class UpdateableAPIResourceTests(StripeApiTestCase):
             'score': 4,
         })
 
-        self.checkSave()
+        await self.checkSave()
 
         self.requestor_mock.request.assert_called_with(
             'post',

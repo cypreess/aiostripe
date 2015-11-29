@@ -1,10 +1,11 @@
 import stripe
-from stripe.test.helper import StripeResourceTest
+from stripe.test.helper import StripeResourceTest, desync
 
 
 class BalanceTest(StripeResourceTest):
-    def test_retrieve_balance(self):
-        stripe.Balance.retrieve()
+    @desync
+    async def test_retrieve_balance(self):
+        await stripe.Balance.retrieve()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -15,8 +16,9 @@ class BalanceTest(StripeResourceTest):
 
 
 class BalanceTransactionTest(StripeResourceTest):
-    def test_list_balance_transactions(self):
-        stripe.BalanceTransaction.all()
+    @desync
+    async def test_list_balance_transactions(self):
+        await stripe.BalanceTransaction.list()
         self.requestor_mock.request.assert_called_with(
             'get',
             '/v1/balance/history',

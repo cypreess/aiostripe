@@ -5,8 +5,8 @@ from stripe.test.helper import (
 
 
 class CouponTest(StripeResourceTest):
-    def test_create_coupon(self):
-        stripe.Coupon.create(**DUMMY_COUPON)
+    async def test_create_coupon(self):
+        await stripe.Coupon.create(**DUMMY_COUPON)
         self.requestor_mock.request.assert_called_with(
             'post',
             '/v1/coupons',
@@ -14,13 +14,13 @@ class CouponTest(StripeResourceTest):
             None
         )
 
-    def test_update_coupon(self):
+    async def test_update_coupon(self):
         coup = stripe.Coupon.construct_from({
             'id': 'cu_update',
             'metadata': {},
         }, 'api_key')
         coup.metadata["key"] = "value"
-        coup.save()
+        await coup.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -33,9 +33,9 @@ class CouponTest(StripeResourceTest):
             None
         )
 
-    def test_delete_coupon(self):
+    async def test_delete_coupon(self):
         c = stripe.Coupon(id='cu_delete')
-        c.delete()
+        await c.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -44,9 +44,9 @@ class CouponTest(StripeResourceTest):
             None
         )
 
-    def test_detach_coupon(self):
+    async def test_detach_coupon(self):
         customer = stripe.Customer(id="cus_delete_discount")
-        customer.delete_discount()
+        await customer.delete_discount()
 
         self.requestor_mock.request.assert_called_with(
             'delete',

@@ -3,7 +3,7 @@ from stripe.test.helper import StripeResourceTest
 
 
 class ReversalTest(StripeResourceTest):
-    def test_fetch_reversal(self):
+    async def test_fetch_reversal(self):
         transfer = stripe.Charge.construct_from({
             'id': 'tr_get',
             'reversals': {
@@ -12,7 +12,7 @@ class ReversalTest(StripeResourceTest):
             }
         }, 'api_key')
 
-        transfer.reversals.retrieve("foo")
+        await transfer.reversals.retrieve("foo")
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -21,7 +21,7 @@ class ReversalTest(StripeResourceTest):
             None
         )
 
-    def test_list_reversals(self):
+    async def test_list_reversals(self):
         transfer = stripe.Charge.construct_from({
             'id': 'tr_list',
             'reversals': {
@@ -30,7 +30,7 @@ class ReversalTest(StripeResourceTest):
             }
         }, 'api_key')
 
-        transfer.reversals.all()
+        await transfer.reversals.list()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -39,14 +39,14 @@ class ReversalTest(StripeResourceTest):
             None
         )
 
-    def test_update_transfer(self):
+    async def test_update_transfer(self):
         reversal = stripe.resource.Reversal.construct_from({
             'id': "rev_update",
             'transfer': "tr_update",
             'metadata': {},
         }, 'api_key')
         reversal.metadata["key"] = "value"
-        reversal.save()
+        await reversal.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',

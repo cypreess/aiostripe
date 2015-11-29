@@ -1,7 +1,7 @@
+import json
 import pickle
 
 import stripe
-from stripe import util
 from stripe.test.helper import StripeUnitTestCase, SAMPLE_INVOICE
 
 
@@ -102,7 +102,7 @@ class StripeObjectTests(StripeUnitTestCase):
         obj = stripe.resource.StripeObject.construct_from(
             SAMPLE_INVOICE, 'key')
 
-        self.check_invoice_data(util.json.loads(str(obj)))
+        self.check_invoice_data(json.loads(str(obj)))
 
     def check_invoice_data(self, data):
         # Check rough structure

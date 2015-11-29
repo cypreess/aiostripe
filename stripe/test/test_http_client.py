@@ -2,7 +2,7 @@ import unittest2
 from mock import Mock
 
 import stripe
-from stripe.test.helper import StripeUnitTestCase
+from stripe.test.helper import StripeUnitTestCase, desync
 
 VALID_API_METHODS = ('get', 'post', 'delete')
 
@@ -27,13 +27,9 @@ class HttpClientTests(StripeUnitTestCase):
 
         self.assertTrue(isinstance(inst, expected))
 
-    def test_new_default_http_client_requests(self):
+    def test_new_default_http_client_asyncio(self):
         self.check_default((),
-                           stripe.http_client.RequestsClient)
-
-    def test_new_default_http_client_urllib2(self):
-        self.check_default(('requests', 'pycurl'),
-                           stripe.http_client.Urllib2Client)
+                           stripe.http_client.AsyncioClient)
 
 
 class ClientTestBase():
@@ -61,7 +57,8 @@ class ClientTestBase():
         raise NotImplementedError(
             'You must implement this in your test subclass')
 
-    def test_request(self):
+    @desync
+    async def test_request(self):
         self.mock_response(self.request_mock, '{"foo": "baz"}', 200)
 
         for meth in VALID_API_METHODS:
@@ -74,7 +71,7 @@ class ClientTestBase():
 
             headers = {'my-header': 'header val'}
 
-            body, code, _ = self.make_request(
+            body, code, _ = await self.make_request(
                 meth, abs_url, headers, data)
 
             self.assertEqual(200, code)
@@ -84,6 +81,7 @@ class ClientTestBase():
                             data, headers)
 
     def test_exception(self):
+        # FIXME: async assert raises?
         self.mock_error(self.request_mock)
         self.assertRaises(stripe.error.APIConnectionError,
                           self.make_request,
@@ -95,51 +93,19 @@ class RequestsVerify(object):
         return other and other.endswith('stripe/data/ca-certificates.crt')
 
 
-class RequestsClientTests(StripeUnitTestCase, ClientTestBase):
-    request_client = stripe.http_client.RequestsClient
+class AsyncioClientTests(StripeUnitTestCase, ClientTestBase):
+    request_client = stripe.http_client.AsyncioClient
+
+    # FIXME: find the way to mock async aiohttp methods
 
     def mock_response(self, mock, body, code):
-        result = Mock()
-        result.content = body
-        result.status_code = code
-
-        mock.request = Mock(return_value=result)
+        raise NotImplementedError()
 
     def mock_error(self, mock):
-        mock.exceptions.RequestException = Exception
-        mock.request.side_effect = mock.exceptions.RequestException()
+        raise NotImplementedError()
 
     def check_call(self, mock, meth, url, post_data, headers):
-        mock.request.assert_called_with(meth, url,
-                                        headers=headers,
-                                        data=post_data,
-                                        verify=RequestsVerify(),
-                                        timeout=80)
-
-
-class Urllib2ClientTests(StripeUnitTestCase, ClientTestBase):
-    request_client = stripe.http_client.Urllib2Client
-
-    def mock_response(self, mock, body, code):
-        response = Mock
-        response.read = Mock(return_value=body)
-        response.code = code
-        response.info = Mock(return_value={})
-
-        self.request_object = Mock()
-        mock.Request = Mock(return_value=self.request_object)
-
-        mock.urlopen = Mock(return_value=response)
-
-    def mock_error(self, mock):
-        mock.urlopen.side_effect = ValueError
-
-    def check_call(self, mock, meth, url, post_data, headers):
-        if isinstance(post_data, str):
-            post_data = post_data.encode('utf-8')
-
-        mock.Request.assert_called_with(url, post_data, headers)
-        mock.urlopen.assert_called_with(self.request_object)
+        raise NotImplementedError()
 
 
 class APIEncodeTest(StripeUnitTestCase):

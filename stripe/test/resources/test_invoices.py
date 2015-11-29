@@ -5,9 +5,9 @@ from stripe.test.helper import (
 
 
 class InvoiceTest(StripeResourceTest):
-    def test_add_invoice_item(self):
+    async def test_add_invoice_item(self):
         customer = stripe.Customer(id="cus_invoice_items")
-        customer.add_invoice_item(**DUMMY_INVOICE_ITEM)
+        await customer.add_invoice_item(**DUMMY_INVOICE_ITEM)
 
         expected = DUMMY_INVOICE_ITEM.copy()
         expected['customer'] = 'cus_invoice_items'
@@ -19,9 +19,9 @@ class InvoiceTest(StripeResourceTest):
             None,
         )
 
-    def test_retrieve_invoice_items(self):
+    async def test_retrieve_invoice_items(self):
         customer = stripe.Customer(id="cus_get_invoice_items")
-        customer.invoice_items()
+        await customer.invoice_items()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -29,9 +29,9 @@ class InvoiceTest(StripeResourceTest):
             {'customer': 'cus_get_invoice_items'},
         )
 
-    def test_invoice_create(self):
+    async def test_invoice_create(self):
         customer = stripe.Customer(id="cus_invoice")
-        stripe.Invoice.create(customer=customer.id)
+        await stripe.Invoice.create(customer=customer.id)
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -42,9 +42,9 @@ class InvoiceTest(StripeResourceTest):
             None
         )
 
-    def test_retrieve_customer_invoices(self):
+    async def test_retrieve_customer_invoices(self):
         customer = stripe.Customer(id="cus_invoice_items")
-        customer.invoices()
+        await customer.invoices()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -54,9 +54,9 @@ class InvoiceTest(StripeResourceTest):
             },
         )
 
-    def test_pay_invoice(self):
+    async def test_pay_invoice(self):
         invoice = stripe.Invoice(id="ii_pay")
-        invoice.pay()
+        await invoice.pay()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -65,8 +65,8 @@ class InvoiceTest(StripeResourceTest):
             None
         )
 
-    def test_upcoming_invoice(self):
-        stripe.Invoice.upcoming()
+    async def test_upcoming_invoice(self):
+        await stripe.Invoice.upcoming()
 
         self.requestor_mock.request.assert_called_with(
             'get',

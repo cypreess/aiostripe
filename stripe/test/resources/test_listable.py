@@ -5,7 +5,7 @@ from stripe.test.helper import (
 
 
 class ListableAPIResourceTests(StripeApiTestCase):
-    def test_all(self):
+    async def test_list(self):
         self.mock_response([
             {
                 'object': 'charge',
@@ -17,7 +17,7 @@ class ListableAPIResourceTests(StripeApiTestCase):
             }
         ])
 
-        res = MyListable.all()
+        res = await MyListable.list()
 
         self.requestor_mock.request.assert_called_with(
             'get', '/v1/mylistables', {})

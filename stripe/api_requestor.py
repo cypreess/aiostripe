@@ -1,14 +1,14 @@
 import calendar
 import datetime
+import json
 import platform
 import time
-import urllib.error
 import urllib.parse
-import urllib.parse
-import urllib.request
+
+from stripe.logger import logger
 
 import stripe
-from stripe import error, http_client, version, util
+from stripe import error, http_client, version
 from stripe.multipart_data_generator import MultipartDataGenerator
 
 
@@ -39,17 +39,17 @@ def _api_encode(data):
                 if isinstance(sv, dict):
                     subdict = _encode_nested_dict(key, sv, fmt='%s[][%s]')
                     for k, v in _api_encode(subdict):
-                        yield (k, v)
+                        yield k, v
                 else:
-                    yield ("%s[]" % (key,), sv)
+                    yield ("%s[]" % key), sv
         elif isinstance(value, dict):
             subdict = _encode_nested_dict(key, value)
             for subkey, subvalue in _api_encode(subdict):
-                yield (subkey, subvalue)
+                yield subkey, subvalue
         elif isinstance(value, datetime.datetime):
-            yield (key, _encode_datetime(value))
+            yield key, _encode_datetime(value)
         else:
-            yield (key, value)
+            yield key, value
 
 
 def _build_api_url(url, query):
@@ -75,42 +75,32 @@ class APIRequestor(object):
         self._client = client or stripe.default_http_client or \
                        http_client.new_default_http_client(verify_ssl_certs=verify)
 
-    def request(self, method, url, params=None, headers=None):
-        rbody, rcode, rheaders, my_api_key = self.request_raw(
-            method.lower(), url, params, headers)
+    async def request(self, method, url, params=None, headers=None):
+        rbody, rcode, rheaders, my_api_key = await self.request_raw(method.lower(), url, params, headers)
         resp = self.interpret_response(rbody, rcode, rheaders)
         return resp, my_api_key
 
-    def handle_api_error(self, rbody, rcode, resp, rheaders):
+    @staticmethod
+    def handle_api_error(rbody, rcode, resp, rheaders):
         try:
             err = resp['error']
         except (KeyError, TypeError):
-            raise error.APIError(
-                "Invalid response object from API: %r (HTTP response code "
-                "was %d)" % (rbody, rcode),
-                rbody, rcode, resp)
+            raise error.APIError('Invalid response object from API: %r (HTTP response code was %d)' % (rbody, rcode),
+                                 rbody, rcode, resp)
 
         # Rate limits were previously coded as 400's with code 'rate_limit'
         if rcode == 429 or (rcode == 400 and err.get('code') == 'rate_limit'):
-            raise error.RateLimitError(
-                err.get('message'), rbody, rcode, resp, rheaders)
+            raise error.RateLimitError(err.get('message'), rbody, rcode, resp, rheaders)
         elif rcode in [400, 404]:
-            raise error.InvalidRequestError(
-                err.get('message'), err.get('param'),
-                rbody, rcode, resp, rheaders)
+            raise error.InvalidRequestError(err.get('message'), err.get('param'), rbody, rcode, resp, rheaders)
         elif rcode == 401:
-            raise error.AuthenticationError(
-                err.get('message'), rbody, rcode, resp,
-                rheaders)
+            raise error.AuthenticationError(err.get('message'), rbody, rcode, resp, rheaders)
         elif rcode == 402:
-            raise error.CardError(err.get('message'), err.get('param'),
-                                  err.get('code'), rbody, rcode, resp,
-                                  rheaders)
+            raise error.CardError(err.get('message'), err.get('param'), err.get('code'), rbody, rcode, resp, rheaders)
         else:
-            raise error.APIError(err.get('message'), rbody, rcode, resp,
-                                 rheaders)
+            raise error.APIError(err.get('message'), rbody, rcode, resp, rheaders)
 
-    def request_raw(self, method, url, params=None, supplied_headers=None):
+    async def request_raw(self, method, url, params=None, supplied_headers=None):
         """
         Mechanism for issuing an API call
         """
@@ -123,12 +113,10 @@ class APIRequestor(object):
             my_api_key = api_key
 
         if my_api_key is None:
-            raise error.AuthenticationError(
-                'No API key provided. (HINT: set your API key using '
-                '"stripe.api_key = <API-KEY>"). You can generate API keys '
-                'from the Stripe web interface.  See https://stripe.com/api '
-                'for details, or email support@stripe.com if you have any '
-                'questions.')
+            raise error.AuthenticationError('No API key provided. (HINT: set your API key using '
+                                            '"stripe.api_key = <API-KEY>"). You can generate API keys from the Stripe '
+                                            'web interface.  See https://stripe.com/api for details, or email '
+                                            'support@stripe.com if you have any questions.')
 
         abs_url = '%s%s' % (self.api_base, url)
 
@@ -137,23 +125,19 @@ class APIRequestor(object):
         if method == 'get' or method == 'delete':
             if params:
                 abs_url = _build_api_url(abs_url, encoded_params)
+
             post_data = None
         elif method == 'post':
-            if supplied_headers is not None and \
-                            supplied_headers.get("Content-Type") == \
-                            "multipart/form-data":
+            if supplied_headers is not None and supplied_headers.get('Content-Type') == 'multipart/form-data':
                 generator = MultipartDataGenerator()
                 generator.add_params(params or {})
                 post_data = generator.get_post_data()
-                supplied_headers["Content-Type"] = \
-                    "multipart/form-data; boundary=%s" % (generator.boundary,)
+                supplied_headers['Content-Type'] = 'multipart/form-data; boundary=%s' % generator.boundary
             else:
                 post_data = encoded_params
         else:
-            raise error.APIConnectionError(
-                'Unrecognized HTTP method %r.  This may indicate a bug in the '
-                'Stripe bindings.  Please contact support@stripe.com for '
-                'assistance.' % (method,))
+            raise error.APIConnectionError('Unrecognized HTTP method %r.  This may indicate a bug in the Stripe '
+                                           'bindings.  Please contact support@stripe.com for assistance.' % method)
 
         ua = {
             'bindings_version': version.VERSION,
@@ -167,13 +151,14 @@ class APIRequestor(object):
             try:
                 val = func()
             except Exception as e:
-                val = "!! %s" % (e,)
+                val = '!! %s' % e
+
             ua[attr] = val
 
         headers = {
-            'X-Stripe-Client-User-Agent': util.json.dumps(ua),
-            'User-Agent': 'Stripe/v1 PythonBindings/%s' % (version.VERSION,),
-            'Authorization': 'Bearer %s' % (my_api_key,)
+            'X-Stripe-Client-User-Agent': json.dumps(ua),
+            'User-Agent': 'Stripe/v1 PythonBindings/%s' % version.VERSION,
+            'Authorization': 'Bearer %s' % my_api_key,
         }
 
         if self.stripe_account:
@@ -186,29 +171,27 @@ class APIRequestor(object):
             headers['Stripe-Version'] = api_version
 
         if supplied_headers is not None:
-            for key, value in list(supplied_headers.items()):
+            for key, value in supplied_headers.items():
                 headers[key] = value
 
-        rbody, rcode, rheaders = self._client.request(
-            method, abs_url, headers, post_data)
+        rbody, rcode, rheaders = await self._client.request(method, abs_url, headers, post_data)
 
-        util.logger.info('%s %s %d', method.upper(), abs_url, rcode)
-        util.logger.debug(
-            'API request to %s returned (response code, response body) of '
-            '(%d, %r)',
-            abs_url, rcode, rbody)
+        logger.info('%s %s %d', method.upper(), abs_url, rcode)
+        logger.debug('API request to %s returned (response code, response body) of (%d, %r)', abs_url, rcode, rbody)
+
         return rbody, rcode, rheaders, my_api_key
 
     def interpret_response(self, rbody, rcode, rheaders):
         try:
             if hasattr(rbody, 'decode'):
                 rbody = rbody.decode('utf-8')
-            resp = util.json.loads(rbody)
+
+            resp = json.loads(rbody)
         except Exception:
-            raise error.APIError(
-                "Invalid response body from API: %s "
-                "(HTTP response code was %d)" % (rbody, rcode),
-                rbody, rcode, rheaders)
+            raise error.APIError('Invalid response body from API: %s (HTTP response code was %d)' % (rbody, rcode),
+                                 rbody, rcode, rheaders)
+
         if not (200 <= rcode < 300):
             self.handle_api_error(rbody, rcode, resp, rheaders)
+
         return resp

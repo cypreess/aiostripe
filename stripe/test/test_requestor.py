@@ -63,7 +63,7 @@ class QueryMatcher(object):
     def __eq__(self, other):
         query = urllib.parse.urlsplit(other).query or other
 
-        parsed = stripe.util.parse_qsl(query)
+        parsed = urllib.parse.parse_qsl(query)
         return self.expected == sorted(parsed)
 
 
@@ -82,7 +82,7 @@ class UrlMatcher(object):
                     part, expected, actual)))
                 return False
 
-        q_matcher = QueryMatcher(stripe.util.parse_qsl(self.exp_parts.query))
+        q_matcher = QueryMatcher(urllib.parse.parse_qsl(self.exp_parts.query))
         return q_matcher == other
 
 
@@ -271,7 +271,7 @@ class APIRequestorRequestTests(StripeUnitTestCase):
             if meth == 'post':
                 self.check_call(
                     meth,
-                    post_data=QueryMatcher(stripe.util.parse_qsl(encoded)))
+                    post_data=QueryMatcher(urllib.parse.parse_qsl(encoded)))
             else:
                 abs_url = "https://api.stripe.com%s?%s" % (
                     self.valid_path, encoded)

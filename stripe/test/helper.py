@@ -4,6 +4,7 @@ import functools
 import os
 import random
 import re
+import json
 import string
 
 import unittest2
@@ -12,7 +13,7 @@ from mock import patch, Mock
 import stripe
 
 
-def deasync(func):
+def desync(func):
     def inner(*args, **kwarg):
         asyncio.get_event_loop().run_until_complete(func(*args, **kwarg))
 
@@ -75,7 +76,7 @@ DUMMY_INVOICE_ITEM = {
     'currency': 'usd',
 }
 
-SAMPLE_INVOICE = stripe.util.json.loads("""
+SAMPLE_INVOICE = json.loads("""
 {
   "amount_due": 1305,
   "attempt_count": 0,
@@ -166,9 +167,7 @@ class StripeTestCase(unittest2.TestCase):
 
 
 class StripeUnitTestCase(StripeTestCase):
-    REQUEST_LIBRARIES = ['requests', 'pycurl']
-
-    REQUEST_LIBRARIES.append('urllib.request')
+    REQUEST_LIBRARIES = ['aiohttp']
 
     def setUp(self):
         super(StripeUnitTestCase, self).setUp()

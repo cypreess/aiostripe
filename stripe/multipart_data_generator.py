@@ -5,7 +5,7 @@ import random
 class MultipartDataGenerator(object):
     def __init__(self, chunk_size=1028):
         self.data = io.BytesIO()
-        self.line_break = "\r\n"
+        self.line_break = '\r\n'
         self.boundary = self._initialize_boundary()
         self.chunk_size = chunk_size
 
@@ -17,17 +17,15 @@ class MultipartDataGenerator(object):
             self._write(self.param_header())
             self._write(self.line_break)
             if hasattr(value, 'read'):
-                self._write("Content-Disposition: form-data; name=\"%s\"; "
-                            "filename=\"%s\"" % (key, value.name))
+                self._write('Content-Disposition: form-data; name="%s"; filename="%s"' % (key, value.name))
                 self._write(self.line_break)
-                self._write("Content-Type: application/octet-stream")
+                self._write('Content-Type: application/octet-stream')
                 self._write(self.line_break)
                 self._write(self.line_break)
 
                 self._write_file(value)
             else:
-                self._write("Content-Disposition: form-data; name=\"%s\"" %
-                            (key,))
+                self._write('Content-Disposition: form-data; name="%s"' % key)
                 self._write(self.line_break)
                 self._write(self.line_break)
                 self._write(value)
@@ -35,10 +33,10 @@ class MultipartDataGenerator(object):
             self._write(self.line_break)
 
     def param_header(self):
-        return "--%s" % self.boundary
+        return '--%s' % self.boundary
 
     def get_post_data(self):
-        self._write("--%s--" % (self.boundary,))
+        self._write('--%s--' % self.boundary)
         self._write(self.line_break)
         return self.data.getvalue()
 
@@ -52,5 +50,6 @@ class MultipartDataGenerator(object):
                 break
             self._write(file_contents)
 
-    def _initialize_boundary(self):
+    @staticmethod
+    def _initialize_boundary():
         return random.randint(0, 2 ** 63)

@@ -5,17 +5,17 @@ from stripe.test.helper import (
 
 
 class RecipientTest(StripeResourceTest):
-    def test_list_recipients(self):
-        stripe.Recipient.all()
+    async def test_list_recipients(self):
+        await stripe.Recipient.list()
         self.requestor_mock.request.assert_called_with(
             'get',
             '/v1/recipients',
             {}
         )
 
-    def test_recipient_transfers(self):
+    async def test_recipient_transfers(self):
         recipient = stripe.Recipient(id='rp_transfer')
-        recipient.transfers()
+        await recipient.transfers()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -23,7 +23,7 @@ class RecipientTest(StripeResourceTest):
             {'recipient': 'rp_transfer'},
         )
 
-    def test_recipient_add_card(self):
+    async def test_recipient_add_card(self):
         recipient = stripe.Recipient.construct_from({
             'id': 'rp_add_card',
             'sources': {
@@ -31,7 +31,7 @@ class RecipientTest(StripeResourceTest):
                 'url': '/v1/recipients/rp_add_card/sources',
             },
         }, 'api_key')
-        recipient.sources.create(card=DUMMY_CARD)
+        await recipient.sources.create(card=DUMMY_CARD)
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -42,13 +42,13 @@ class RecipientTest(StripeResourceTest):
             None
         )
 
-    def test_recipient_update_card(self):
+    async def test_recipient_update_card(self):
         card = stripe.Card.construct_from({
             'recipient': 'rp_update_card',
             'id': 'ca_update_card',
         }, 'api_key')
         card.name = 'The Best'
-        card.save()
+        await card.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -59,12 +59,12 @@ class RecipientTest(StripeResourceTest):
             None
         )
 
-    def test_recipient_delete_card(self):
+    async def test_recipient_delete_card(self):
         card = stripe.Card.construct_from({
             'recipient': 'rp_delete_card',
             'id': 'ca_delete_card',
         }, 'api_key')
-        card.delete()
+        await card.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',

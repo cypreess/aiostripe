@@ -7,8 +7,7 @@ from stripe.test.helper import StripeTestCase, NOW, DUMMY_CHARGE, DUMMY_CARD
 
 
 class FunctionalTests(StripeTestCase):
-    # request_client = stripe.http_client.AsyncioClient
-    request_client = stripe.http_client.Urllib2Client
+    request_client = stripe.http_client.AsyncioClient
 
     def setUp(self):
         super(FunctionalTests, self).setUp()
@@ -28,6 +27,7 @@ class FunctionalTests(StripeTestCase):
         self.client_patcher.stop()
 
     def test_dns_failure(self):
+        # FIXME: async assert raises?
         api_base = stripe.api_base
         try:
             stripe.api_base = 'https://my-invalid-domain.ireallywontresolve/v1'
@@ -36,61 +36,59 @@ class FunctionalTests(StripeTestCase):
         finally:
             stripe.api_base = api_base
 
-    def test_run(self):
+    async def test_run(self):
         charge = stripe.Charge.create(**DUMMY_CHARGE)
         self.assertFalse(charge.refunded)
-        charge.refund()
+        await charge.refund()
         self.assertTrue(charge.refunded)
 
-    def test_refresh(self):
-        charge = stripe.Charge.create(**DUMMY_CHARGE)
-        charge2 = stripe.Charge.retrieve(charge.id)
+    async def test_refresh(self):
+        charge = await stripe.Charge.create(**DUMMY_CHARGE)
+        charge2 = await stripe.Charge.retrieve(charge.id)
         self.assertEqual(charge2.created, charge.created)
 
         charge2.junk = 'junk'
-        charge2.refresh()
+        await charge2.refresh()
         self.assertRaises(AttributeError, lambda: charge2.junk)
 
-    def test_list_accessors(self):
-        customer = stripe.Customer.create(card=DUMMY_CARD)
+    async def test_list_accessors(self):
+        customer = await stripe.Customer.create(card=DUMMY_CARD)
         self.assertEqual(customer['created'], customer.created)
         customer['foo'] = 'bar'
         self.assertEqual(customer.foo, 'bar')
 
     def test_raise(self):
+        # FIXME: async assert raises?
         EXPIRED_CARD = DUMMY_CARD.copy()
         EXPIRED_CARD['exp_month'] = NOW.month - 2
         EXPIRED_CARD['exp_year'] = NOW.year - 2
         self.assertRaises(stripe.error.CardError, stripe.Charge.create,
                           amount=100, currency='usd', card=EXPIRED_CARD)
 
-    def test_response_headers(self):
+    async def test_response_headers(self):
         EXPIRED_CARD = DUMMY_CARD.copy()
         EXPIRED_CARD['exp_month'] = NOW.month - 2
         EXPIRED_CARD['exp_year'] = NOW.year - 2
         try:
-            stripe.Charge.create(amount=100, currency='usd', card=EXPIRED_CARD)
+            await stripe.Charge.create(amount=100, currency='usd', card=EXPIRED_CARD)
             self.fail('charge creation with expired card did not fail')
         except stripe.error.CardError as e:
             self.assertTrue(e.request_id.startswith('req_'))
 
     def test_unicode(self):
+        # FIXME: async assert raises?
         # Make sure unicode requests can be sent
         self.assertRaises(stripe.error.InvalidRequestError,
                           stripe.Charge.retrieve,
                           id='☃')
 
-    def test_none_values(self):
-        customer = stripe.Customer.create(plan=None)
+    async def test_none_values(self):
+        customer = await stripe.Customer.create(plan=None)
         self.assertTrue(customer.id)
 
-    def test_missing_id(self):
+    async def test_missing_id(self):
         customer = stripe.Customer()
-        self.assertRaises(stripe.error.InvalidRequestError, customer.refresh)
-
-
-class RequestsFunctionalTests(FunctionalTests):
-    request_client = stripe.http_client.RequestsClient
+        await self.asyncAssertRaises(stripe.error.InvalidRequestError, customer.refresh)
 
 
 class AuthenticationErrorTest(StripeTestCase):

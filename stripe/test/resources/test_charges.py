@@ -5,8 +5,8 @@ from stripe.test.helper import (
 
 
 class ChargeTest(StripeResourceTest):
-    def test_charge_list_all(self):
-        stripe.Charge.all(created={'lt': NOW})
+    async def test_charge_list_all(self):
+        await stripe.Charge.list(created={'lt': NOW})
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -16,8 +16,8 @@ class ChargeTest(StripeResourceTest):
             }
         )
 
-    def test_charge_list_create(self):
-        stripe.Charge.create(idempotency_key='foo', **DUMMY_CHARGE)
+    async def test_charge_list_create(self):
+        await stripe.Charge.create(idempotency_key='foo', **DUMMY_CHARGE)
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -26,8 +26,8 @@ class ChargeTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'},
         )
 
-    def test_charge_list_retrieve(self):
-        stripe.Charge.retrieve('ch_test_id')
+    async def test_charge_list_retrieve(self):
+        await stripe.Charge.retrieve('ch_test_id')
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -36,9 +36,9 @@ class ChargeTest(StripeResourceTest):
             None
         )
 
-    def test_charge_update_dispute(self):
+    async def test_charge_update_dispute(self):
         charge = stripe.Charge(id='ch_update_id')
-        charge.update_dispute(idempotency_key='foo')
+        await charge.update_dispute(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -47,9 +47,9 @@ class ChargeTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'},
         )
 
-    def test_charge_close_dispute(self):
+    async def test_charge_close_dispute(self):
         charge = stripe.Charge(id='ch_update_id')
-        charge.close_dispute(idempotency_key='foo')
+        await charge.close_dispute(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -58,9 +58,9 @@ class ChargeTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'},
         )
 
-    def test_mark_as_fraudulent(self):
+    async def test_mark_as_fraudulent(self):
         charge = stripe.Charge(id='ch_update_id')
-        charge.mark_as_fraudulent(idempotency_key='foo')
+        await charge.mark_as_fraudulent(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -71,9 +71,9 @@ class ChargeTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'},
         )
 
-    def test_mark_as_safe(self):
+    async def test_mark_as_safe(self):
         charge = stripe.Charge(id='ch_update_id')
-        charge.mark_as_safe(idempotency_key='foo')
+        await charge.mark_as_safe(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -84,8 +84,8 @@ class ChargeTest(StripeResourceTest):
             {'Idempotency-Key': 'foo'},
         )
 
-    def test_create_with_source_param(self):
-        stripe.Charge.create(amount=100, currency='usd',
+    async def test_create_with_source_param(self):
+        await stripe.Charge.create(amount=100, currency='usd',
                              source='btcrcv_test_receiver')
 
         self.requestor_mock.request.assert_called_with(

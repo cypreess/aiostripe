@@ -3,8 +3,8 @@ from stripe.test.helper import StripeResourceTest
 
 
 class AccountTest(StripeResourceTest):
-    def test_retrieve_account_deprecated(self):
-        stripe.Account.retrieve()
+    async def test_retrieve_account_deprecated(self):
+        await stripe.Account.retrieve()
 
         self.requestor_mock.request.assert_called_with(
             'get',
@@ -13,8 +13,8 @@ class AccountTest(StripeResourceTest):
             None
         )
 
-    def test_retrieve_account(self):
-        stripe.Account.retrieve('acct_foo')
+    async def test_retrieve_account(self):
+        await stripe.Account.retrieve('acct_foo')
         self.requestor_mock.request.assert_called_with(
             'get',
             '/v1/accounts/acct_foo',
@@ -22,21 +22,22 @@ class AccountTest(StripeResourceTest):
             None
         )
 
-    def test_list_accounts(self):
-        stripe.Account.all()
+    @desync
+    async def test_list_accounts(self):
+        await stripe.Account.list()
         self.requestor_mock.request.assert_called_with(
             'get',
             '/v1/accounts',
             {}
         )
 
-    def test_create_account(self):
+    async def test_create_account(self):
         pii = {
             'type': 'individual',
             'first_name': 'Joe',
             'last_name': 'Smith',
         }
-        stripe.Account.create(legal_entity=pii)
+        async stripe.Account.create(legal_entity=pii)
         self.requestor_mock.request.assert_called_with(
             'post',
             '/v1/accounts',
@@ -46,13 +47,13 @@ class AccountTest(StripeResourceTest):
             None,
         )
 
-    def test_update_account(self):
+    async def test_update_account(self):
         acct = stripe.Account.construct_from({
             'id': 'acct_update',
             'legal_entity': {'first_name': 'Joe'},
         }, 'api_key')
         acct.legal_entity['first_name'] = 'Bob'
-        acct.save()
+        await acct.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
@@ -65,12 +66,12 @@ class AccountTest(StripeResourceTest):
             None,
         )
 
-    def test_account_delete_bank_account(self):
+    async def test_account_delete_bank_account(self):
         source = stripe.BankAccount.construct_from({
             'account': 'acc_delete_ba',
             'id': 'ba_delete_ba',
         }, 'api_key')
-        source.delete()
+        await source.delete()
 
         self.requestor_mock.request.assert_called_with(
             'delete',
@@ -79,7 +80,7 @@ class AccountTest(StripeResourceTest):
             None
         )
 
-    def test_verify_additional_owner(self):
+    async def test_verify_additional_owner(self):
         acct = stripe.Account.construct_from({
             'id': 'acct_update',
             'additional_owners': [{
@@ -89,7 +90,7 @@ class AccountTest(StripeResourceTest):
         }, 'api_key')
         owner = acct.additional_owners[0]
         owner.verification.document = 'file_foo'
-        acct.save()
+        await acct.save()
 
         self.requestor_mock.request.assert_called_with(
             'post',
