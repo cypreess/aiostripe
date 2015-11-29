@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class ChargeTest(StripeResourceTest):
-
     def test_charge_list_all(self):
         stripe.Charge.all(created={'lt': NOW})
 

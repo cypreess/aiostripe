@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class AccountTest(StripeResourceTest):
-
     def test_retrieve_account_deprecated(self):
         stripe.Account.retrieve()
 

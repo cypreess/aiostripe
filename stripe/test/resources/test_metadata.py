@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class MetadataTest(StripeResourceTest):
-
     def test_noop_metadata(self):
         charge = stripe.Charge(id='ch_foo')
         charge.description = 'test'

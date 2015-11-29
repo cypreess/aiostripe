@@ -4,7 +4,6 @@ from stripe.test.helper import (
 
 
 class UpdateableAPIResourceTests(StripeApiTestCase):
-
     def setUp(self):
         super(UpdateableAPIResourceTests, self).setUp()
 

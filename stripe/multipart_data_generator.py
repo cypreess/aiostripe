@@ -1,6 +1,5 @@
-import random
-import sys
 import io
+import random
 
 
 class MultipartDataGenerator(object):
@@ -11,7 +10,7 @@ class MultipartDataGenerator(object):
         self.chunk_size = chunk_size
 
     def add_params(self, params):
-        for key, value in params.iteritems():
+        for key, value in params.items():
             if value is None:
                 continue
 
@@ -44,10 +43,7 @@ class MultipartDataGenerator(object):
         return self.data.getvalue()
 
     def _write(self, value):
-        if sys.version_info < (3, 0):
-            self.data.write(value)
-        else:
-            self.data.write(bytes(value, 'utf-8'))
+        self.data.write(bytes(value, 'utf-8'))
 
     def _write_file(self, f):
         while True:
@@ -57,4 +53,4 @@ class MultipartDataGenerator(object):
             self._write(file_contents)
 
     def _initialize_boundary(self):
-        return random.randint(0, 2**63)
+        return random.randint(0, 2 ** 63)

@@ -1,9 +1,7 @@
 # Exceptions
-import sys
 
 
 class StripeError(Exception):
-
     def __init__(self, message=None, http_body=None, http_status=None,
                  json_body=None, headers=None):
         super(StripeError, self).__init__(message)
@@ -24,14 +22,11 @@ class StripeError(Exception):
 
     def __unicode__(self):
         if self.request_id is not None:
-            return u"Request {0}: {1}".format(self.request_id, self._message)
+            return 'Request {0}: {1}'.format(self.request_id, self._message)
         else:
             return self._message
 
-    if sys.version_info > (3, 0):
-        __str__ = lambda self: self.__unicode__()
-    else:
-        __str__ = lambda self: unicode(self).encode('utf-8')
+    __str__ = lambda self: self.__unicode__()
 
 
 class APIError(StripeError):
@@ -43,7 +38,6 @@ class APIConnectionError(StripeError):
 
 
 class CardError(StripeError):
-
     def __init__(self, message, param, code, http_body=None,
                  http_status=None, json_body=None, headers=None):
         super(CardError, self).__init__(
@@ -54,7 +48,6 @@ class CardError(StripeError):
 
 
 class InvalidRequestError(StripeError):
-
     def __init__(self, message, param, http_body=None,
                  http_status=None, json_body=None, headers=None):
         super(InvalidRequestError, self).__init__(

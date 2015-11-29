@@ -8,7 +8,6 @@ from stripe.test.helper import (
 
 
 class CustomerTest(StripeResourceTest):
-
     def test_list_customers(self):
         stripe.Customer.all()
         self.requestor_mock.request.assert_called_with(
@@ -195,7 +194,6 @@ class CustomerTest(StripeResourceTest):
 
 
 class CustomerPlanTest(StripeResourceTest):
-
     def test_create_customer(self):
         stripe.Customer.create(plan=DUMMY_PLAN['id'], card=DUMMY_CARD)
 

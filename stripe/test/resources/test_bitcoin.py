@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class BitcoinReceiverTest(StripeResourceTest):
-
     def test_retrieve_resource(self):
         stripe.BitcoinReceiver.retrieve("btcrcv_test_receiver")
         self.requestor_mock.request.assert_called_with(

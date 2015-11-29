@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class ProductTest(StripeResourceTest):
-
     def test_list_products(self):
         stripe.Product.all()
         self.requestor_mock.request.assert_called_with(
@@ -14,7 +13,6 @@ class ProductTest(StripeResourceTest):
 
 
 class SKUTest(StripeResourceTest):
-
     def test_list_skus(self):
         stripe.SKU.all()
         self.requestor_mock.request.assert_called_with(
@@ -25,7 +23,6 @@ class SKUTest(StripeResourceTest):
 
 
 class OrderTest(StripeResourceTest):
-
     def test_list_orders(self):
         stripe.Order.all()
         self.requestor_mock.request.assert_called_with(

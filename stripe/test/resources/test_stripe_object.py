@@ -1,5 +1,4 @@
 import pickle
-import sys
 
 import stripe
 from stripe import util
@@ -7,7 +6,6 @@ from stripe.test.helper import StripeUnitTestCase, SAMPLE_INVOICE
 
 
 class StripeObjectTests(StripeUnitTestCase):
-
     def test_initializes_with_parameters(self):
         obj = stripe.resource.StripeObject(
             'foo', 'bar', myparam=5, yourparam='boo')
@@ -124,15 +122,12 @@ class StripeObjectTests(StripeUnitTestCase):
         obj = stripe.resource.StripeObject(
             'foo', 'bar', myparam=5)
 
-        obj['object'] = u'\u4e00boo\u1f00'
+        obj['object'] = '\u4e00boo\u1f00'
 
         res = repr(obj)
 
-        if sys.version_info[0] < 3:
-            res = unicode(repr(obj), 'utf-8')
-
-        self.assertTrue(u'<StripeObject \u4e00boo\u1f00' in res)
-        self.assertTrue(u'id=foo' in res)
+        self.assertTrue('<StripeObject \u4e00boo\u1f00' in res)
+        self.assertTrue('id=foo' in res)
 
     def test_pickling(self):
         obj = stripe.resource.StripeObject(

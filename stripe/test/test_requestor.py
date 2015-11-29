@@ -1,18 +1,16 @@
 import datetime
-import unittest2
-import urlparse
+import urllib.parse
 
+import unittest2
 from mock import Mock, ANY
 
 import stripe
-
 from stripe.test.helper import StripeUnitTestCase
 
 VALID_API_METHODS = ('get', 'post', 'delete')
 
 
 class GMT1(datetime.tzinfo):
-
     def utcoffset(self, dt):
         return datetime.timedelta(hours=1)
 
@@ -27,7 +25,9 @@ class APIHeaderMatcher(object):
     EXP_KEYS = ['X-Stripe-Client-User-Agent', 'User-Agent', 'Authorization']
     METHOD_EXTRA_KEYS = {"post": ["Content-Type"]}
 
-    def __init__(self, api_key=None, extra={}, request_method=None):
+    def __init__(self, api_key=None, extra=None, request_method=None):
+        if extra is None:
+            extra = {}
         self.request_method = request_method
         self.api_key = api_key or stripe.api_key
         self.extra = extra
@@ -38,18 +38,18 @@ class APIHeaderMatcher(object):
                 self._extra_match(other))
 
     def _keys_match(self, other):
-        expected_keys = self.EXP_KEYS + self.extra.keys()
+        expected_keys = self.EXP_KEYS + list(self.extra.keys())
         if self.request_method is not None and self.request_method in \
                 self.METHOD_EXTRA_KEYS:
             expected_keys.extend(self.METHOD_EXTRA_KEYS[self.request_method])
 
-        return (sorted(other.keys()) == sorted(expected_keys))
+        return sorted(other.keys()) == sorted(expected_keys)
 
     def _auth_match(self, other):
         return other['Authorization'] == "Bearer %s" % (self.api_key,)
 
     def _extra_match(self, other):
-        for k, v in self.extra.iteritems():
+        for k, v in self.extra.items():
             if other[k] != v:
                 return False
 
@@ -57,31 +57,29 @@ class APIHeaderMatcher(object):
 
 
 class QueryMatcher(object):
-
     def __init__(self, expected):
         self.expected = sorted(expected)
 
     def __eq__(self, other):
-        query = urlparse.urlsplit(other).query or other
+        query = urllib.parse.urlsplit(other).query or other
 
         parsed = stripe.util.parse_qsl(query)
         return self.expected == sorted(parsed)
 
 
 class UrlMatcher(object):
-
     def __init__(self, expected):
-        self.exp_parts = urlparse.urlsplit(expected)
+        self.exp_parts = urllib.parse.urlsplit(expected)
 
     def __eq__(self, other):
-        other_parts = urlparse.urlsplit(other)
+        other_parts = urllib.parse.urlsplit(other)
 
         for part in ('scheme', 'netloc', 'path', 'fragment'):
             expected = getattr(self.exp_parts, part)
             actual = getattr(other_parts, part)
             if expected != actual:
-                print 'Expected %s "%s" but got "%s"' % (
-                    part, expected, actual)
+                print(('Expected %s "%s" but got "%s"' % (
+                    part, expected, actual)))
                 return False
 
         q_matcher = QueryMatcher(stripe.util.parse_qsl(self.exp_parts.query))
@@ -101,7 +99,7 @@ class APIRequestorRequestTests(StripeUnitTestCase):
         },
         'list': [1, 'foo', 'baz'],
         'string': 'boo',
-        'unicode': u'\u1234',
+        'unicode': '\\u1234',
         'datetime': datetime.datetime(2013, 1, 1, second=1, tzinfo=GMT1()),
         'none': None,
     }
@@ -124,7 +122,7 @@ class APIRequestorRequestTests(StripeUnitTestCase):
             ('%s[]', 'baz'),
         ],
         'string': [('%s', 'boo')],
-        'unicode': [('%s', stripe.util.utf8(u'\u1234'))],
+        'unicode': [('%s', '\\u1234')],
         'datetime': [('%s', 1356994801)],
         'none': [],
     }
@@ -197,7 +195,7 @@ class APIRequestorRequestTests(StripeUnitTestCase):
         self.requestor.request('get', '', self.ENCODE_INPUTS)
 
         expectation = []
-        for type_, values in self.ENCODE_EXPECTATIONS.iteritems():
+        for type_, values in self.ENCODE_EXPECTATIONS.items():
             expectation.extend([(k % (type_,), str(v)) for k, v in values])
 
         self.check_call('get', QueryMatcher(expectation))
@@ -391,7 +389,6 @@ class APIRequestorRequestTests(StripeUnitTestCase):
 
 
 class DefaultClientTests(unittest2.TestCase):
-
     def setUp(self):
         stripe.default_http_client = None
         stripe.api_key = 'foo'
@@ -403,7 +400,7 @@ class DefaultClientTests(unittest2.TestCase):
         hc.request = Mock(return_value=("{}", 200, {}))
 
         stripe.default_http_client = hc
-        stripe.Charge.all(limit=3)
+        stripe.Charge.list(limit=3)
 
         hc.request.assert_called_with(
             'get', 'https://api.stripe.com/v1/charges?limit=3', ANY, None)

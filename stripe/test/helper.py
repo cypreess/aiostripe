@@ -1,14 +1,23 @@
+import asyncio
 import datetime
+import functools
 import os
 import random
 import re
 import string
-import sys
-import unittest2
 
+import unittest2
 from mock import patch, Mock
 
 import stripe
+
+
+def deasync(func):
+    def inner(*args, **kwarg):
+        asyncio.get_event_loop().run_until_complete(func(*args, **kwarg))
+
+    return functools.update_wrapper(inner, func)
+
 
 NOW = datetime.datetime.now()
 
@@ -146,7 +155,7 @@ class StripeTestCase(unittest2.TestCase):
             if regexp is None:
                 return True
 
-            if isinstance(regexp, basestring):
+            if isinstance(regexp, str):
                 regexp = re.compile(regexp)
             if not regexp.search(str(err)):
                 raise self.failureException('"%s" does not match "%s"' %
@@ -157,12 +166,9 @@ class StripeTestCase(unittest2.TestCase):
 
 
 class StripeUnitTestCase(StripeTestCase):
-    REQUEST_LIBRARIES = ['urlfetch', 'requests', 'pycurl']
+    REQUEST_LIBRARIES = ['requests', 'pycurl']
 
-    if sys.version_info >= (3, 0):
-        REQUEST_LIBRARIES.append('urllib.request')
-    else:
-        REQUEST_LIBRARIES.append('urllib2')
+    REQUEST_LIBRARIES.append('urllib.request')
 
     def setUp(self):
         super(StripeUnitTestCase, self).setUp()
@@ -178,12 +184,11 @@ class StripeUnitTestCase(StripeTestCase):
     def tearDown(self):
         super(StripeUnitTestCase, self).tearDown()
 
-        for patcher in self.request_patchers.itervalues():
+        for patcher in self.request_patchers.values():
             patcher.stop()
 
 
 class StripeApiTestCase(StripeTestCase):
-
     def setUp(self):
         super(StripeApiTestCase, self).setUp()
 
@@ -201,7 +206,6 @@ class StripeApiTestCase(StripeTestCase):
 
 
 class StripeResourceTest(StripeApiTestCase):
-
     def setUp(self):
         super(StripeResourceTest, self).setUp()
         self.mock_response({})

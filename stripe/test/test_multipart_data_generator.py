@@ -1,12 +1,10 @@
 import re
-import sys
 
 from stripe.multipart_data_generator import MultipartDataGenerator
 from stripe.test.helper import StripeTestCase
 
 
 class MultipartDataGeneratorTests(StripeTestCase):
-
     def test_generate_simple_multipart_data(self):
         with open(__file__) as test_file:
             params = {
@@ -18,11 +16,8 @@ class MultipartDataGeneratorTests(StripeTestCase):
             generator.add_params(params)
             post_data = generator.get_post_data()
 
-            if sys.version_info < (3, 0):
-                http_body = "".join([line for line in post_data])
-            else:
-                byte_array = bytearray([i for i in post_data])
-                http_body = byte_array.decode('utf-8')
+            byte_array = bytearray([i for i in post_data])
+            http_body = byte_array.decode('utf-8')
 
             self.assertTrue(re.search(
                 r"Content-Disposition: form-data; name=\"key1\"", http_body))

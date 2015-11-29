@@ -5,7 +5,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class FileUploadTest(StripeResourceTest):
-
     def test_create_file_upload(self):
         test_file = tempfile.TemporaryFile()
         stripe.FileUpload.create(

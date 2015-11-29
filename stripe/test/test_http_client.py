@@ -1,17 +1,13 @@
-import sys
 import unittest2
-
-from mock import Mock, patch
+from mock import Mock
 
 import stripe
-
 from stripe.test.helper import StripeUnitTestCase
 
 VALID_API_METHODS = ('get', 'post', 'delete')
 
 
 class HttpClientTests(StripeUnitTestCase):
-
     def setUp(self):
         super(HttpClientTests, self).setUp()
 
@@ -31,25 +27,16 @@ class HttpClientTests(StripeUnitTestCase):
 
         self.assertTrue(isinstance(inst, expected))
 
-    def test_new_default_http_client_urlfetch(self):
-        self.check_default((),
-                           stripe.http_client.UrlFetchClient)
-
     def test_new_default_http_client_requests(self):
-        self.check_default(('urlfetch',),
+        self.check_default((),
                            stripe.http_client.RequestsClient)
 
-    def test_new_default_http_client_pycurl(self):
-        self.check_default(('urlfetch', 'requests',),
-                           stripe.http_client.PycurlClient)
-
     def test_new_default_http_client_urllib2(self):
-        self.check_default(('urlfetch', 'requests', 'pycurl'),
+        self.check_default(('requests', 'pycurl'),
                            stripe.http_client.Urllib2Client)
 
 
 class ClientTestBase():
-
     @property
     def request_mock(self):
         return self.request_mocks[self.request_client.name]
@@ -104,7 +91,6 @@ class ClientTestBase():
 
 
 class RequestsVerify(object):
-
     def __eq__(self, other):
         return other and other.endswith('stripe/data/ca-certificates.crt')
 
@@ -131,31 +117,6 @@ class RequestsClientTests(StripeUnitTestCase, ClientTestBase):
                                         timeout=80)
 
 
-class UrlFetchClientTests(StripeUnitTestCase, ClientTestBase):
-    request_client = stripe.http_client.UrlFetchClient
-
-    def mock_response(self, mock, body, code):
-        result = Mock()
-        result.content = body
-        result.status_code = code
-
-        mock.fetch = Mock(return_value=result)
-
-    def mock_error(self, mock):
-        mock.Error = mock.InvalidURLError = Exception
-        mock.fetch.side_effect = mock.InvalidURLError()
-
-    def check_call(self, mock, meth, url, post_data, headers):
-        mock.fetch.assert_called_with(
-            url=url,
-            method=meth,
-            headers=headers,
-            validate_certificate=True,
-            deadline=55,
-            payload=post_data
-        )
-
-
 class Urllib2ClientTests(StripeUnitTestCase, ClientTestBase):
     request_client = stripe.http_client.Urllib2Client
 
@@ -174,62 +135,14 @@ class Urllib2ClientTests(StripeUnitTestCase, ClientTestBase):
         mock.urlopen.side_effect = ValueError
 
     def check_call(self, mock, meth, url, post_data, headers):
-        if sys.version_info >= (3, 0) and isinstance(post_data, basestring):
+        if isinstance(post_data, str):
             post_data = post_data.encode('utf-8')
 
         mock.Request.assert_called_with(url, post_data, headers)
         mock.urlopen.assert_called_with(self.request_object)
 
 
-class PycurlClientTests(StripeUnitTestCase, ClientTestBase):
-    request_client = stripe.http_client.PycurlClient
-
-    @property
-    def request_mock(self):
-        if not hasattr(self, 'curl_mock'):
-            lib_mock = self.request_mocks[self.request_client.name]
-
-            self.curl_mock = Mock()
-
-            lib_mock.Curl = Mock(return_value=self.curl_mock)
-
-        return self.curl_mock
-
-    def setUp(self):
-        super(PycurlClientTests, self).setUp()
-
-        self.sio_patcher = patch('stripe.util.StringIO.StringIO')
-
-        sio_mock = Mock()
-        self.sio_patcher.start().return_value = sio_mock
-        self.sio_getvalue = sio_mock.getvalue
-
-    def tearDown(self):
-        super(PycurlClientTests, self).tearDown()
-
-        self.sio_patcher.stop()
-
-    def mock_response(self, mock, body, code):
-        self.sio_getvalue.return_value = body
-
-        mock.getinfo.return_value = code
-
-    def mock_error(self, mock):
-        class FakeException(BaseException):
-
-            def __getitem__(self, i):
-                return 'foo'
-
-        stripe.http_client.pycurl.error = FakeException
-        mock.perform.side_effect = stripe.http_client.pycurl.error
-
-    def check_call(self, mock, meth, url, post_data, headers):
-        # TODO: Check the setopt calls
-        pass
-
-
 class APIEncodeTest(StripeUnitTestCase):
-
     def test_encode_dict(self):
         body = {
             'foo': {
@@ -259,6 +172,7 @@ class APIEncodeTest(StripeUnitTestCase):
 
         self.assertTrue(('foo[][dob][month]', 1) in values)
         self.assertTrue(('foo[][name]', 'bat') in values)
+
 
 if __name__ == '__main__':
     unittest2.main()

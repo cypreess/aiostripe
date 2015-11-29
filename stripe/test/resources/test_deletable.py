@@ -4,7 +4,6 @@ from stripe.test.helper import (
 
 
 class DeletableAPIResourceTests(StripeApiTestCase):
-
     def test_delete(self):
         self.mock_response({
             'id': 'mid',

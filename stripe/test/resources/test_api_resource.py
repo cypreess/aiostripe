@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class APIResourceTests(StripeApiTestCase):
-
     def test_retrieve_and_refresh(self):
         self.mock_response({
             'id': 'foo2',
@@ -73,7 +72,6 @@ class APIResourceTests(StripeApiTestCase):
 
 
 class SingletonAPIResourceTests(StripeApiTestCase):
-
     def test_retrieve(self):
         self.mock_response({
             'single': 'ton'

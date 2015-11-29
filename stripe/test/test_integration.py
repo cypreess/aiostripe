@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
 import unittest2
-import stripe
-
 from mock import patch
-from stripe.test.helper import (StripeTestCase, NOW, DUMMY_CHARGE, DUMMY_CARD)
+
+import stripe
+from stripe.test.helper import StripeTestCase, NOW, DUMMY_CHARGE, DUMMY_CARD
 
 
 class FunctionalTests(StripeTestCase):
+    # request_client = stripe.http_client.AsyncioClient
     request_client = stripe.http_client.Urllib2Client
 
     def setUp(self):
@@ -79,7 +78,7 @@ class FunctionalTests(StripeTestCase):
         # Make sure unicode requests can be sent
         self.assertRaises(stripe.error.InvalidRequestError,
                           stripe.Charge.retrieve,
-                          id=u'☃')
+                          id='☃')
 
     def test_none_values(self):
         customer = stripe.Customer.create(plan=None)
@@ -94,32 +93,7 @@ class RequestsFunctionalTests(FunctionalTests):
     request_client = stripe.http_client.RequestsClient
 
 
-class UrlfetchFunctionalTests(FunctionalTests):
-    request_client = 'urlfetch'
-
-    def setUp(self):
-        if stripe.http_client.urlfetch is None:
-            self.skipTest(
-                '`urlfetch` from Google App Engine is unavailable.')
-        else:
-            super(UrlfetchFunctionalTests, self).setUp()
-
-
-class PycurlFunctionalTests(FunctionalTests):
-
-    def setUp(self):
-        if not os.environ.get('STRIPE_TEST_PYCURL'):
-            self.skipTest('Pycurl skipped as STRIPE_TEST_PYCURL is not set')
-        if sys.version_info >= (3, 0):
-            self.skipTest('Pycurl is not supported in Python 3')
-        else:
-            super(PycurlFunctionalTests, self).setUp()
-
-    request_client = stripe.http_client.PycurlClient
-
-
 class AuthenticationErrorTest(StripeTestCase):
-
     def test_invalid_credentials(self):
         key = stripe.api_key
         try:
@@ -127,7 +101,7 @@ class AuthenticationErrorTest(StripeTestCase):
             stripe.Customer.create()
         except stripe.error.AuthenticationError as e:
             self.assertEqual(401, e.http_status)
-            self.assertTrue(isinstance(e.http_body, basestring))
+            self.assertTrue(isinstance(e.http_body, str))
             self.assertTrue(isinstance(e.json_body, dict))
             self.assertTrue(e.request_id.startswith('req_'))
         finally:
@@ -135,7 +109,6 @@ class AuthenticationErrorTest(StripeTestCase):
 
 
 class CardErrorTest(StripeTestCase):
-
     def test_declined_card_props(self):
         EXPIRED_CARD = DUMMY_CARD.copy()
         EXPIRED_CARD['exp_month'] = NOW.month - 2
@@ -144,19 +117,18 @@ class CardErrorTest(StripeTestCase):
             stripe.Charge.create(amount=100, currency='usd', card=EXPIRED_CARD)
         except stripe.error.CardError as e:
             self.assertEqual(402, e.http_status)
-            self.assertTrue(isinstance(e.http_body, basestring))
+            self.assertTrue(isinstance(e.http_body, str))
             self.assertTrue(isinstance(e.json_body, dict))
             self.assertTrue(e.request_id.startswith('req_'))
 
 
 class InvalidRequestErrorTest(StripeTestCase):
-
     def test_nonexistent_object(self):
         try:
             stripe.Charge.retrieve('invalid')
         except stripe.error.InvalidRequestError as e:
             self.assertEqual(404, e.http_status)
-            self.assertTrue(isinstance(e.http_body, basestring))
+            self.assertTrue(isinstance(e.http_body, str))
             self.assertTrue(isinstance(e.json_body, dict))
             self.assertTrue(e.request_id.startswith('req_'))
 
@@ -165,7 +137,7 @@ class InvalidRequestErrorTest(StripeTestCase):
             stripe.Charge.create()
         except stripe.error.InvalidRequestError as e:
             self.assertEqual(400, e.http_status)
-            self.assertTrue(isinstance(e.http_body, basestring))
+            self.assertTrue(isinstance(e.http_body, str))
             self.assertTrue(isinstance(e.json_body, dict))
             self.assertTrue(e.request_id.startswith('req_'))
 

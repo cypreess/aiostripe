@@ -2,9 +2,10 @@ import calendar
 import datetime
 import platform
 import time
-import urllib
-import urlparse
-import warnings
+import urllib.error
+import urllib.parse
+import urllib.parse
+import urllib.request
 
 import stripe
 from stripe import error, http_client, version, util
@@ -22,14 +23,13 @@ def _encode_datetime(dttime):
 
 def _encode_nested_dict(key, data, fmt='%s[%s]'):
     d = {}
-    for subkey, subvalue in data.iteritems():
+    for subkey, subvalue in data.items():
         d[fmt % (key, subkey)] = subvalue
     return d
 
 
 def _api_encode(data):
-    for key, value in data.iteritems():
-        key = util.utf8(key)
+    for key, value in data.items():
         if value is None:
             continue
         elif hasattr(value, 'stripe_id'):
@@ -41,7 +41,7 @@ def _api_encode(data):
                     for k, v in _api_encode(subdict):
                         yield (k, v)
                 else:
-                    yield ("%s[]" % (key,), util.utf8(sv))
+                    yield ("%s[]" % (key,), sv)
         elif isinstance(value, dict):
             subdict = _encode_nested_dict(key, value)
             for subkey, subvalue in _api_encode(subdict):
@@ -49,20 +49,19 @@ def _api_encode(data):
         elif isinstance(value, datetime.datetime):
             yield (key, _encode_datetime(value))
         else:
-            yield (key, util.utf8(value))
+            yield (key, value)
 
 
 def _build_api_url(url, query):
-    scheme, netloc, path, base_query, fragment = urlparse.urlsplit(url)
+    scheme, netloc, path, base_query, fragment = urllib.parse.urlsplit(url)
 
     if base_query:
         query = '%s&%s' % (base_query, query)
 
-    return urlparse.urlunsplit((scheme, netloc, path, query, fragment))
+    return urllib.parse.urlunsplit((scheme, netloc, path, query, fragment))
 
 
 class APIRequestor(object):
-
     def __init__(self, key=None, client=None, api_base=None, account=None):
         if api_base:
             self.api_base = api_base
@@ -74,66 +73,7 @@ class APIRequestor(object):
         from stripe import verify_ssl_certs as verify
 
         self._client = client or stripe.default_http_client or \
-            http_client.new_default_http_client(verify_ssl_certs=verify)
-
-    @classmethod
-    def api_url(cls, url=''):
-        warnings.warn(
-            'The `api_url` class method of APIRequestor is '
-            'deprecated and will be removed in version 2.0.'
-            'If you need public access to this function, please email us '
-            'at support@stripe.com.',
-            DeprecationWarning)
-        return '%s%s' % (stripe.api_base, url)
-
-    @classmethod
-    def _deprecated_encode(cls, stk, key, value):
-        warnings.warn(
-            'The encode_* class methods of APIRequestor are deprecated and '
-            'will be removed in version 2.0. '
-            'If you need public access to this function, please email us '
-            'at support@stripe.com.',
-            DeprecationWarning, stacklevel=2)
-        stk.extend(_api_encode({key: value}))
-
-    @classmethod
-    def encode_dict(cls, stk, key, value):
-        cls._deprecated_encode(stk, key, value)
-
-    @classmethod
-    def encode_list(cls, stk, key, value):
-        cls._deprecated_encode(stk, key, value)
-
-    @classmethod
-    def encode_datetime(cls, stk, key, value):
-        cls._deprecated_encode(stk, key, value)
-
-    @classmethod
-    def encode_none(cls, stk, key, value):
-        cls._deprecated_encode(stk, key, value)
-
-    @classmethod
-    def encode(cls, d):
-        """
-        Internal: encode a string for url representation
-        """
-        warnings.warn(
-            'The `encode` class method of APIRequestor is deprecated and '
-            'will be removed in version 2.0.'
-            'If you need public access to this function, please email us '
-            'at support@stripe.com.',
-            DeprecationWarning)
-        return urllib.urlencode(list(_api_encode(d)))
-
-    @classmethod
-    def build_url(cls, url, params):
-        warnings.warn(
-            'The `build_url` class method of APIRequestor is deprecated and '
-            'will be removed in version 2.0.'
-            'If you need public access to this function, please email us '
-            'at support@stripe.com.',
-            DeprecationWarning)
-        return _build_api_url(url, cls.encode(params))
+                       http_client.new_default_http_client(verify_ssl_certs=verify)
 
     def request(self, method, url, params=None, headers=None):
         rbody, rcode, rheaders, my_api_key = self.request_raw(
@@ -192,7 +132,7 @@ class APIRequestor(object):
 
         abs_url = '%s%s' % (self.api_base, url)
 
-        encoded_params = urllib.urlencode(list(_api_encode(params or {})))
+        encoded_params = urllib.parse.urlencode(list(_api_encode(params or {})))
 
         if method == 'get' or method == 'delete':
             if params:
@@ -200,8 +140,8 @@ class APIRequestor(object):
             post_data = None
         elif method == 'post':
             if supplied_headers is not None and \
-                    supplied_headers.get("Content-Type") == \
-                    "multipart/form-data":
+                            supplied_headers.get("Content-Type") == \
+                            "multipart/form-data":
                 generator = MultipartDataGenerator()
                 generator.add_params(params or {})
                 post_data = generator.get_post_data()
@@ -226,7 +166,7 @@ class APIRequestor(object):
                            ['uname', lambda: ' '.join(platform.uname())]]:
             try:
                 val = func()
-            except Exception, e:
+            except Exception as e:
                 val = "!! %s" % (e,)
             ua[attr] = val
 
@@ -246,7 +186,7 @@ class APIRequestor(object):
             headers['Stripe-Version'] = api_version
 
         if supplied_headers is not None:
-            for key, value in supplied_headers.items():
+            for key, value in list(supplied_headers.items()):
                 headers[key] = value
 
         rbody, rcode, rheaders = self._client.request(
@@ -272,74 +212,3 @@ class APIRequestor(object):
         if not (200 <= rcode < 300):
             self.handle_api_error(rbody, rcode, resp, rheaders)
         return resp
-
-    # Deprecated request handling.  Will all be removed in 2.0
-    def _deprecated_request(self, impl, method, url, headers, params):
-        warnings.warn(
-            'The *_request functions of APIRequestor are deprecated and '
-            'will be removed in version 2.0. Please use the client classes '
-            ' in `stripe.http_client` instead',
-            DeprecationWarning, stacklevel=2)
-
-        method = method.lower()
-
-        if method == 'get' or method == 'delete':
-            if params:
-                url = self.build_url(url, params)
-            post_data = None
-        elif method == 'post':
-            post_data = self.encode(params)
-        else:
-            raise error.APIConnectionError(
-                'Unrecognized HTTP method %r.  This may indicate a bug in the '
-                'Stripe bindings.  Please contact support@stripe.com for '
-                'assistance.' % (method,))
-
-        client = impl(verify_ssl_certs=self._client._verify_ssl_certs)
-        return client.request(method, url, headers, post_data)
-
-    def _deprecated_handle_error(self, impl, *args):
-        warnings.warn(
-            'The handle_*_error functions of APIRequestor are deprecated and '
-            'will be removed in version 2.0. Please use the client classes '
-            ' in `stripe.http_client` instead',
-            DeprecationWarning, stacklevel=2)
-
-        client = impl(verify_ssl_certs=self._client._verify_ssl_certs)
-        return client._handle_request_error(*args)
-
-    def requests_request(self, meth, abs_url, headers, params):
-        from stripe.http_client import RequestsClient
-        return self._deprecated_request(RequestsClient, meth, abs_url,
-                                        headers, params)
-
-    def handle_requests_error(self, err):
-        from stripe.http_client import RequestsClient
-        return self._deprecated_handle_error(RequestsClient, err)
-
-    def pycurl_request(self, meth, abs_url, headers, params):
-        from stripe.http_client import PycurlClient
-        return self._deprecated_request(PycurlClient, meth, abs_url,
-                                        headers, params)
-
-    def handle_pycurl_error(self, err):
-        from stripe.http_client import PycurlClient
-        return self._deprecated_handle_error(PycurlClient, err)
-
-    def urlfetch_request(self, meth, abs_url, headers, params):
-        from stripe.http_client import UrlFetchClient
-        return self._deprecated_request(UrlFetchClient, meth, abs_url,
-                                        headers, params)
-
-    def handle_urlfetch_error(self, err, abs_url):
-        from stripe.http_client import UrlFetchClient
-        return self._deprecated_handle_error(UrlFetchClient, err, abs_url)
-
-    def urllib2_request(self, meth, abs_url, headers, params):
-        from stripe.http_client import Urllib2Client
-        return self._deprecated_request(Urllib2Client, meth, abs_url,
-                                        headers, params)
-
-    def handle_urllib2_error(self, err, abs_url):
-        from stripe.http_client import Urllib2Client
-        return self._deprecated_handle_error(Urllib2Client, err)

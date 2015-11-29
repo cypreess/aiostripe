@@ -1,6 +1,6 @@
-import urllib
-import warnings
-import sys
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from stripe import api_requestor, error, util, upload_api_base
 
@@ -40,7 +40,7 @@ def convert_to_stripe_object(resp, api_key, account):
     elif isinstance(resp, dict) and not isinstance(resp, StripeObject):
         resp = resp.copy()
         klass_name = resp.get('object')
-        if isinstance(klass_name, basestring):
+        if isinstance(klass_name, str):
             klass = types.get(klass_name, StripeObject)
         else:
             klass = StripeObject
@@ -114,8 +114,8 @@ class StripeObject(dict):
 
         try:
             return self[k]
-        except KeyError, err:
-            raise AttributeError(*err.args)
+        except KeyError as err:
+            raise AttributeError(*err.args) from err
 
     def __delattr__(self, k):
         if k[0] == '_' or k in self.__dict__:
@@ -142,7 +142,7 @@ class StripeObject(dict):
     def __getitem__(self, k):
         try:
             return super(StripeObject, self).__getitem__(k)
-        except KeyError, err:
+        except KeyError as err:
             if k in self._transient_values:
                 raise KeyError(
                     "%r.  HINT: The %r attribute was set in the past."
@@ -150,9 +150,9 @@ class StripeObject(dict):
                     "the result returned by Stripe's API, probably as a "
                     "result of a save().  The attributes currently "
                     "available on this object are: %s" %
-                    (k, k, ', '.join(self.keys())))
+                    (k, k, ', '.join(list(self.keys())))) from err
             else:
-                raise err
+                raise
 
     def __delitem__(self, k):
         super(StripeObject, self).__delitem__(k)
@@ -188,7 +188,7 @@ class StripeObject(dict):
 
         self._transient_values = self._transient_values - set(values)
 
-        for k, v in values.iteritems():
+        for k, v in values.items():
             super(StripeObject, self).__setitem__(
                 k, convert_to_stripe_object(v, api_key, stripe_account))
 
@@ -211,31 +211,19 @@ class StripeObject(dict):
     def __repr__(self):
         ident_parts = [type(self).__name__]
 
-        if isinstance(self.get('object'), basestring):
+        if isinstance(self.get('object'), str):
             ident_parts.append(self.get('object'))
 
-        if isinstance(self.get('id'), basestring):
+        if isinstance(self.get('id'), str):
             ident_parts.append('id=%s' % (self.get('id'),))
 
         unicode_repr = '<%s at %s> JSON: %s' % (
             ' '.join(ident_parts), hex(id(self)), str(self))
 
-        if sys.version_info[0] < 3:
-            return unicode_repr.encode('utf-8')
-        else:
-            return unicode_repr
+        return unicode_repr
 
     def __str__(self):
         return util.json.dumps(self, sort_keys=True, indent=2)
-
-    def to_dict(self):
-        warnings.warn(
-            'The `to_dict` method is deprecated and will be removed in '
-            'version 2.0 of the Stripe bindings. The StripeObject is '
-            'itself now a subclass of `dict`.',
-            DeprecationWarning)
-
-        return dict(self)
 
     @property
     def stripe_id(self):
@@ -246,7 +234,7 @@ class StripeObject(dict):
         unsaved_keys = self._unsaved_values or set()
         previous = previous or self._previous or {}
 
-        for k, v in self.items():
+        for k, v in list(self.items()):
             if k == 'id' or (isinstance(k, str) and k.startswith('_')):
                 continue
             elif isinstance(v, APIResource):
@@ -261,20 +249,7 @@ class StripeObject(dict):
         return params
 
 
-class StripeObjectEncoder(util.json.JSONEncoder):
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            '`StripeObjectEncoder` is deprecated and will be removed in '
-            'version 2.0 of the Stripe bindings.  StripeObject is now a '
-            'subclass of `dict` and is handled natively by the built-in '
-            'json library.',
-            DeprecationWarning)
-        super(StripeObjectEncoder, self).__init__(*args, **kwargs)
-
-
 class APIResource(StripeObject):
-
     @classmethod
     def retrieve(cls, id, api_key=None, **params):
         instance = cls(id, api_key, **params)
@@ -291,7 +266,7 @@ class APIResource(StripeObject):
             raise NotImplementedError(
                 'APIResource is an abstract class.  You should perform '
                 'actions on its subclasses (e.g. Charge, Customer)')
-        return str(urllib.quote_plus(cls.__name__.lower()))
+        return str(urllib.parse.quote_plus(cls.__name__.lower()))
 
     @classmethod
     def class_url(cls):
@@ -304,23 +279,14 @@ class APIResource(StripeObject):
             raise error.InvalidRequestError(
                 'Could not determine which URL to request: %s instance '
                 'has invalid ID: %r' % (type(self).__name__, id), 'id')
-        id = util.utf8(id)
         base = self.class_url()
-        extn = urllib.quote_plus(id)
+        extn = urllib.parse.quote_plus(id)
         return "%s/%s" % (base, extn)
 
 
 class ListObject(StripeObject):
-
     def list(self, **params):
         return self.request('get', self['url'], params)
-
-    def all(self, **params):
-        warnings.warn("The `all` method is deprecated and will"
-                      "be removed in future versions. Please use the "
-                      "`list` method instead",
-                      DeprecationWarning)
-        return self.list(**params)
 
     def auto_paging_iter(self):
         page = self
@@ -344,8 +310,7 @@ class ListObject(StripeObject):
 
     def retrieve(self, id, **params):
         base = self.get('url')
-        id = util.utf8(id)
-        extn = urllib.quote_plus(id)
+        extn = urllib.parse.quote_plus(id)
         url = "%s/%s" % (base, extn)
 
         return self.request('get', url, params)
@@ -355,7 +320,6 @@ class ListObject(StripeObject):
 
 
 class SingletonAPIResource(APIResource):
-
     @classmethod
     def retrieve(cls, **params):
         return super(SingletonAPIResource, cls).retrieve(None, **params)
@@ -373,15 +337,6 @@ class SingletonAPIResource(APIResource):
 
 
 class ListableAPIResource(APIResource):
-
-    @classmethod
-    def all(cls, *args, **params):
-        warnings.warn("The `all` class method is deprecated and will"
-                      "be removed in future versions. Please use the "
-                      "`list` class method instead",
-                      DeprecationWarning)
-        return cls.list(*args, **params)
-
     @classmethod
     def auto_paging_iter(self, *args, **params):
         return self.list(*args, **params).auto_paging_iter()
@@ -396,7 +351,6 @@ class ListableAPIResource(APIResource):
 
 
 class CreateableAPIResource(APIResource):
-
     @classmethod
     def create(cls, api_key=None, idempotency_key=None,
                stripe_account=None, **params):
@@ -408,7 +362,6 @@ class CreateableAPIResource(APIResource):
 
 
 class UpdateableAPIResource(APIResource):
-
     def save(self, idempotency_key=None):
         updated_params = self.serialize(None)
         headers = populate_headers(idempotency_key)
@@ -422,7 +375,6 @@ class UpdateableAPIResource(APIResource):
 
 
 class DeletableAPIResource(APIResource):
-
     def delete(self, **params):
         self.refresh_from(self.request('delete', self.instance_url(), params))
         return self
@@ -441,9 +393,8 @@ class Account(CreateableAPIResource, ListableAPIResource,
         id = self.get('id')
         if not id:
             return "/v1/account"
-        id = util.utf8(id)
         base = self.class_url()
-        extn = urllib.quote_plus(id)
+        extn = urllib.parse.quote_plus(id)
         return "%s/%s" % (base, extn)
 
 
@@ -452,36 +403,33 @@ class Balance(SingletonAPIResource):
 
 
 class BalanceTransaction(ListableAPIResource):
-
     @classmethod
     def class_url(cls):
         return '/v1/balance/history'
 
 
 class Card(UpdateableAPIResource, DeletableAPIResource):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        extn = urllib.quote_plus(self.id)
-        if (hasattr(self, 'customer')):
-            customer = util.utf8(self.customer)
+        extn = urllib.parse.quote_plus(self.id)
+        if hasattr(self, 'customer'):
+            customer = self.customer
 
             base = Customer.class_url()
-            owner_extn = urllib.quote_plus(customer)
+            owner_extn = urllib.parse.quote_plus(customer)
             class_base = "sources"
 
-        elif (hasattr(self, 'recipient')):
-            recipient = util.utf8(self.recipient)
+        elif hasattr(self, 'recipient'):
+            recipient = self.recipient
 
             base = Recipient.class_url()
-            owner_extn = urllib.quote_plus(recipient)
+            owner_extn = urllib.parse.quote_plus(recipient)
             class_base = "cards"
 
-        elif (hasattr(self, 'account')):
-            account = util.utf8(self.account)
+        elif hasattr(self, 'account'):
+            account = self.account
 
             base = Account.class_url()
-            owner_extn = urllib.quote_plus(account)
+            owner_extn = urllib.parse.quote_plus(account)
             class_base = "external_accounts"
 
         else:
@@ -502,7 +450,6 @@ class Card(UpdateableAPIResource, DeletableAPIResource):
 
 
 class VerifyMixin(object):
-
     def verify(self, idempotency_key=None, **params):
         url = self.instance_url() + '/verify'
         headers = populate_headers(idempotency_key)
@@ -511,22 +458,20 @@ class VerifyMixin(object):
 
 
 class BankAccount(UpdateableAPIResource, DeletableAPIResource, VerifyMixin):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        extn = urllib.quote_plus(self.id)
-        if (hasattr(self, 'customer')):
-            customer = util.utf8(self.customer)
+        extn = urllib.parse.quote_plus(self.id)
+        if hasattr(self, 'customer'):
+            customer = self.customer
 
             base = Customer.class_url()
-            owner_extn = urllib.quote_plus(customer)
+            owner_extn = urllib.parse.quote_plus(customer)
             class_base = "sources"
 
-        elif (hasattr(self, 'account')):
-            account = util.utf8(self.account)
+        elif hasattr(self, 'account'):
+            account = self.account
 
             base = Account.class_url()
-            owner_extn = urllib.quote_plus(account)
+            owner_extn = urllib.parse.quote_plus(account)
             class_base = "external_accounts"
 
         else:
@@ -546,7 +491,6 @@ class BankAccount(UpdateableAPIResource, DeletableAPIResource, VerifyMixin):
 
 class Charge(CreateableAPIResource, ListableAPIResource,
              UpdateableAPIResource):
-
     def refund(self, idempotency_key=None, **params):
         url = self.instance_url() + '/refund'
         headers = populate_headers(idempotency_key)
@@ -598,7 +542,6 @@ class Charge(CreateableAPIResource, ListableAPIResource,
 
 class Dispute(CreateableAPIResource, ListableAPIResource,
               UpdateableAPIResource):
-
     def close(self, idempotency_key=None):
         url = self.instance_url() + '/close'
         headers = populate_headers(idempotency_key)
@@ -608,7 +551,6 @@ class Dispute(CreateableAPIResource, ListableAPIResource,
 
 class Customer(CreateableAPIResource, UpdateableAPIResource,
                ListableAPIResource, DeletableAPIResource):
-
     def add_invoice_item(self, idempotency_key=None, **params):
         params['customer'] = self.id
         ii = InvoiceItem.create(self.api_key,
@@ -630,34 +572,6 @@ class Customer(CreateableAPIResource, UpdateableAPIResource,
         charges = Charge.all(self.api_key, **params)
         return charges
 
-    def update_subscription(self, idempotency_key=None, **params):
-        warnings.warn(
-            'The `update_subscription` method is deprecated. Instead, use the '
-            '`subscriptions` resource on the customer object to update a '
-            'subscription',
-            DeprecationWarning)
-        requestor = api_requestor.APIRequestor(self.api_key,
-                                               account=self.stripe_account)
-        url = self.instance_url() + '/subscription'
-        headers = populate_headers(idempotency_key)
-        response, api_key = requestor.request('post', url, params, headers)
-        self.refresh_from({'subscription': response}, api_key, True)
-        return self.subscription
-
-    def cancel_subscription(self, idempotency_key=None, **params):
-        warnings.warn(
-            'The `cancel_subscription` method is deprecated. Instead, use the '
-            '`subscriptions` resource on the customer object to cancel a '
-            'subscription',
-            DeprecationWarning)
-        requestor = api_requestor.APIRequestor(self.api_key,
-                                               account=self.stripe_account)
-        url = self.instance_url() + '/subscription'
-        headers = populate_headers(idempotency_key)
-        response, api_key = requestor.request('delete', url, params, headers)
-        self.refresh_from({'subscription': response}, api_key, True)
-        return self.subscription
-
     def delete_discount(self, **params):
         requestor = api_requestor.APIRequestor(self.api_key,
                                                account=self.stripe_account)
@@ -668,7 +582,6 @@ class Customer(CreateableAPIResource, UpdateableAPIResource,
 
 class Invoice(CreateableAPIResource, ListableAPIResource,
               UpdateableAPIResource):
-
     def pay(self, idempotency_key=None):
         headers = populate_headers(idempotency_key)
         return self.request('post', self.instance_url() + '/pay', {}, headers)
@@ -693,14 +606,10 @@ class Plan(CreateableAPIResource, DeletableAPIResource,
 
 
 class Subscription(UpdateableAPIResource, DeletableAPIResource):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        self.customer = util.utf8(self.customer)
-
         base = Customer.class_url()
-        cust_extn = urllib.quote_plus(self.customer)
-        extn = urllib.quote_plus(self.id)
+        cust_extn = urllib.parse.quote_plus(self.customer)
+        extn = urllib.parse.quote_plus(self.id)
 
         return "%s/%s/subscriptions/%s" % (base, cust_extn, extn)
 
@@ -738,20 +647,17 @@ class Event(ListableAPIResource):
 
 class Transfer(CreateableAPIResource, UpdateableAPIResource,
                ListableAPIResource):
-
     def cancel(self):
         self.refresh_from(self.request('post',
-                          self.instance_url() + '/cancel'))
+                                       self.instance_url() + '/cancel'))
 
 
 class Reversal(UpdateableAPIResource):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        self.charge = util.utf8(self.transfer)
+        self.charge = self.transfer
         base = Transfer.class_url()
-        cust_extn = urllib.quote_plus(self.transfer)
-        extn = urllib.quote_plus(self.id)
+        cust_extn = urllib.parse.quote_plus(self.transfer)
+        extn = urllib.parse.quote_plus(self.id)
         return "%s/%s/reversals/%s" % (base, cust_extn, extn)
 
     @classmethod
@@ -763,7 +669,6 @@ class Reversal(UpdateableAPIResource):
 
 class Recipient(CreateableAPIResource, UpdateableAPIResource,
                 ListableAPIResource, DeletableAPIResource):
-
     def transfers(self, **params):
         params['recipient'] = self.id
         transfers = Transfer.all(self.api_key, **params)
@@ -805,13 +710,10 @@ class ApplicationFee(ListableAPIResource):
 
 
 class ApplicationFeeRefund(UpdateableAPIResource):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        self.fee = util.utf8(self.fee)
         base = ApplicationFee.class_url()
-        cust_extn = urllib.quote_plus(self.fee)
-        extn = urllib.quote_plus(self.id)
+        cust_extn = urllib.parse.quote_plus(self.fee)
+        extn = urllib.parse.quote_plus(self.id)
         return "%s/%s/refunds/%s" % (base, cust_extn, extn)
 
     @classmethod
@@ -823,15 +725,12 @@ class ApplicationFeeRefund(UpdateableAPIResource):
 
 class BitcoinReceiver(CreateableAPIResource, UpdateableAPIResource,
                       DeletableAPIResource, ListableAPIResource):
-
     def instance_url(self):
-        self.id = util.utf8(self.id)
-        extn = urllib.quote_plus(self.id)
+        extn = urllib.parse.quote_plus(self.id)
 
-        if (hasattr(self, 'customer')):
-            self.customer = util.utf8(self.customer)
+        if hasattr(self, 'customer'):
             base = Customer.class_url()
-            cust_extn = urllib.quote_plus(self.customer)
+            cust_extn = urllib.parse.quote_plus(self.customer)
             return "%s/%s/sources/%s" % (base, cust_extn, extn)
         else:
             base = BitcoinReceiver.class_url()

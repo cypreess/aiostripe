@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class ApplicationFeeTest(StripeResourceTest):
-
     def test_list_application_fees(self):
         stripe.ApplicationFee.all()
         self.requestor_mock.request.assert_called_with(
@@ -14,7 +13,6 @@ class ApplicationFeeTest(StripeResourceTest):
 
 
 class ApplicationFeeRefundTest(StripeResourceTest):
-
     def test_fetch_refund(self):
         fee = stripe.ApplicationFee.construct_from({
             'id': 'fee_get_refund',

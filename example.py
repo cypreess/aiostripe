@@ -2,7 +2,7 @@ import stripe
 
 stripe.api_key = 'tGN0bIwXnHdwOa85VABjPdSn8nWY7G7I'
 
-print "Attempting charge..."
+print("Attempting charge...")
 
 resp = stripe.Charge.create(
     amount=200,
@@ -15,4 +15,4 @@ resp = stripe.Charge.create(
     description='customer@gmail.com'
 )
 
-print 'Success: %r' % (resp, )
+print('Success: %r' % (resp, ))

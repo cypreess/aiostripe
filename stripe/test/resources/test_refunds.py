@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class RefundTest(StripeResourceTest):
-
     def test_create_refund(self):
         stripe.Refund.create(charge='ch_foo')
 
@@ -55,7 +54,6 @@ class RefundTest(StripeResourceTest):
 
 
 class ChargeRefundTest(StripeResourceTest):
-
     def test_create_refund(self):
         charge = stripe.Charge.construct_from({
             'id': 'ch_foo',

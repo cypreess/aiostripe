@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class InvoiceTest(StripeResourceTest):
-
     def test_add_invoice_item(self):
         customer = stripe.Customer(id="cus_invoice_items")
         customer.add_invoice_item(**DUMMY_INVOICE_ITEM)

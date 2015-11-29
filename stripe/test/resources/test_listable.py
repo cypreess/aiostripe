@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class ListableAPIResourceTests(StripeApiTestCase):
-
     def test_all(self):
         self.mock_response([
             {

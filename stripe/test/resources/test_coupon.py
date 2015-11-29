@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class CouponTest(StripeResourceTest):
-
     def test_create_coupon(self):
         stripe.Coupon.create(**DUMMY_COUPON)
         self.requestor_mock.request.assert_called_with(

@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class CreateableAPIResourceTests(StripeApiTestCase):
-
     def test_create(self):
         self.mock_response({
             'object': 'charge',

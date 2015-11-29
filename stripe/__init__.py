@@ -41,7 +41,6 @@ from stripe.resource import (  # noqa
     Subscription,
     Token,
     Transfer)
-
 # Error imports.  Note that we may want to move these out of the root
 # namespace in the future and you should prefer to access them via
 # the fully qualified `stripe.error` module.
@@ -54,21 +53,3 @@ from stripe.error import (  # noqa
     CardError,
     InvalidRequestError,
     StripeError)
-
-# DEPRECATED: These imports will be moved out of the root stripe namespace
-# in version 2.0
-
-from stripe.version import VERSION  # noqa
-from stripe.api_requestor import APIRequestor  # noqa
-from stripe.resource import (  # noqa
-    APIResource,
-    CreateableAPIResource,
-    DeletableAPIResource,
-    ListObject,
-    ListableAPIResource,
-    SingletonAPIResource,
-    StripeObject,
-    StripeObjectEncoder,
-    UpdateableAPIResource,
-    convert_to_stripe_object)
-from stripe.util import json, logger  # noqa

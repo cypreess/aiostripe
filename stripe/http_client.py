@@ -2,24 +2,18 @@ import os
 import sys
 import textwrap
 import warnings
-import email
 
-from stripe import error, util
+import aiohttp
 
+from stripe import error
 
-# - Requests is the preferred HTTP library
-# - Google App Engine has urlfetch
-# - Use Pycurl if it's there (at least it verifies SSL certs)
-# - Fall back to urllib2 with a warning if needed
 try:
-    import urllib2
+    import urllib.request
+    import urllib.error
 except ImportError:
     pass
 
-try:
-    import pycurl
-except ImportError:
-    pycurl = None
+pycurl = None
 
 try:
     import requests
@@ -46,16 +40,9 @@ else:
                 'library to the latest version.)' % (version,))
             requests = None
 
-try:
-    from google.appengine.api import urlfetch
-except ImportError:
-    urlfetch = None
-
 
 def new_default_http_client(*args, **kwargs):
-    if urlfetch:
-        impl = UrlFetchClient
-    elif requests:
+    if requests:
         impl = RequestsClient
     elif pycurl:
         impl = PycurlClient
@@ -72,7 +59,6 @@ def new_default_http_client(*args, **kwargs):
 
 
 class HTTPClient(object):
-
     def __init__(self, verify_ssl_certs=True):
         self._verify_ssl_certs = verify_ssl_certs
 
@@ -101,21 +87,21 @@ class RequestsClient(HTTPClient):
                                           data=post_data,
                                           timeout=80,
                                           **kwargs)
-            except TypeError, e:
+            except TypeError as e:
                 raise TypeError(
                     'Warning: It looks like your installed version of the '
                     '"requests" library is not compatible with Stripe\'s '
                     'usage thereof. (HINT: The most likely cause is that '
                     'your "requests" library is out of date. You can fix '
                     'that by running "pip install -U requests".) The '
-                    'underlying error was: %s' % (e,))
+                    'underlying error was: %s' % (e,)) from e
 
             # This causes the content to actually be read, which could cause
             # e.g. a socket timeout. TODO: The other fetch methods probably
             # are susceptible to the same and should be updated.
             content = result.content
             status_code = result.status_code
-        except Exception, e:
+        except Exception as e:
             # Would catch just requests.exceptions.RequestException, but can
             # also raise ValueError, RuntimeError, etc.
             self._handle_request_error(e)
@@ -141,151 +127,30 @@ class RequestsClient(HTTPClient):
         raise error.APIConnectionError(msg)
 
 
-class UrlFetchClient(HTTPClient):
-    name = 'urlfetch'
-
-    def __init__(self, verify_ssl_certs=True, deadline=55):
-        self._verify_ssl_certs = verify_ssl_certs
-        # GAE requests time out after 60 seconds, so make sure to default
-        # to 55 seconds to allow for a slow Stripe
-        self._deadline = deadline
-
-    def request(self, method, url, headers, post_data=None):
-        try:
-            result = urlfetch.fetch(
-                url=url,
-                method=method,
-                headers=headers,
-                # Google App Engine doesn't let us specify our own cert bundle.
-                # However, that's ok because the CA bundle they use recognizes
-                # api.stripe.com.
-                validate_certificate=self._verify_ssl_certs,
-                deadline=self._deadline,
-                payload=post_data
-            )
-        except urlfetch.Error, e:
-            self._handle_request_error(e, url)
-
-        return result.content, result.status_code, result.headers
-
-    def _handle_request_error(self, e, url):
-        if isinstance(e, urlfetch.InvalidURLError):
-            msg = ("The Stripe library attempted to fetch an "
-                   "invalid URL (%r). This is likely due to a bug "
-                   "in the Stripe Python bindings. Please let us know "
-                   "at support@stripe.com." % (url,))
-        elif isinstance(e, urlfetch.DownloadError):
-            msg = "There was a problem retrieving data from Stripe."
-        elif isinstance(e, urlfetch.ResponseTooLargeError):
-            msg = ("There was a problem receiving all of your data from "
-                   "Stripe.  This is likely due to a bug in Stripe. "
-                   "Please let us know at support@stripe.com.")
-        else:
-            msg = ("Unexpected error communicating with Stripe. If this "
-                   "problem persists, let us know at support@stripe.com.")
-
-        msg = textwrap.fill(msg) + "\n\n(Network error: " + str(e) + ")"
-        raise error.APIConnectionError(msg)
-
-
-class PycurlClient(HTTPClient):
-    name = 'pycurl'
-
-    def parse_headers(self, data):
-        if '\r\n' not in data:
-            return {}
-        raw_headers = data.split('\r\n', 1)[1]
-        headers = email.message_from_string(raw_headers)
-        return dict((k.lower(), v) for k, v in dict(headers).iteritems())
-
-    def request(self, method, url, headers, post_data=None):
-        s = util.StringIO.StringIO()
-        rheaders = util.StringIO.StringIO()
-        curl = pycurl.Curl()
-
-        if method == 'get':
-            curl.setopt(pycurl.HTTPGET, 1)
-        elif method == 'post':
-            curl.setopt(pycurl.POST, 1)
-            curl.setopt(pycurl.POSTFIELDS, post_data)
-        else:
-            curl.setopt(pycurl.CUSTOMREQUEST, method.upper())
-
-        # pycurl doesn't like unicode URLs
-        curl.setopt(pycurl.URL, util.utf8(url))
-
-        curl.setopt(pycurl.WRITEFUNCTION, s.write)
-        curl.setopt(pycurl.HEADERFUNCTION, rheaders.write)
-        curl.setopt(pycurl.NOSIGNAL, 1)
-        curl.setopt(pycurl.CONNECTTIMEOUT, 30)
-        curl.setopt(pycurl.TIMEOUT, 80)
-        curl.setopt(pycurl.HTTPHEADER, ['%s: %s' % (k, v)
-                    for k, v in headers.iteritems()])
-        if self._verify_ssl_certs:
-            curl.setopt(pycurl.CAINFO, os.path.join(
-                os.path.dirname(__file__), 'data/ca-certificates.crt'))
-        else:
-            curl.setopt(pycurl.SSL_VERIFYHOST, False)
-
-        try:
-            curl.perform()
-        except pycurl.error, e:
-            self._handle_request_error(e)
-        rbody = s.getvalue()
-        rcode = curl.getinfo(pycurl.RESPONSE_CODE)
-
-        return rbody, rcode, self.parse_headers(rheaders.getvalue())
-
-    def _handle_request_error(self, e):
-        if e[0] in [pycurl.E_COULDNT_CONNECT,
-                    pycurl.E_COULDNT_RESOLVE_HOST,
-                    pycurl.E_OPERATION_TIMEOUTED]:
-            msg = ("Could not connect to Stripe.  Please check your "
-                   "internet connection and try again.  If this problem "
-                   "persists, you should check Stripe's service status at "
-                   "https://twitter.com/stripestatus, or let us know at "
-                   "support@stripe.com.")
-        elif (e[0] in [pycurl.E_SSL_CACERT,
-                       pycurl.E_SSL_PEER_CERTIFICATE]):
-            msg = ("Could not verify Stripe's SSL certificate.  Please make "
-                   "sure that your network is not intercepting certificates.  "
-                   "If this problem persists, let us know at "
-                   "support@stripe.com.")
-        else:
-            msg = ("Unexpected error communicating with Stripe. If this "
-                   "problem persists, let us know at support@stripe.com.")
-
-        msg = textwrap.fill(msg) + "\n\n(Network error: " + e[1] + ")"
-        raise error.APIConnectionError(msg)
-
-
 class Urllib2Client(HTTPClient):
-    if sys.version_info >= (3, 0):
-        name = 'urllib.request'
-    else:
-        name = 'urllib2'
+    name = 'urllib.request'
 
     def request(self, method, url, headers, post_data=None):
-        if sys.version_info >= (3, 0) and isinstance(post_data, basestring):
+        if isinstance(post_data, str):
             post_data = post_data.encode('utf-8')
 
-        req = urllib2.Request(url, post_data, headers)
+        req = urllib.request.Request(url, post_data, headers)
 
         if method not in ('get', 'post'):
             req.get_method = lambda: method.upper()
 
         try:
-            response = urllib2.urlopen(req)
+            response = urllib.request.urlopen(req)
             rbody = response.read()
             rcode = response.code
             headers = dict(response.info())
-        except urllib2.HTTPError, e:
+        except urllib.error.HTTPError as e:
             rcode = e.code
             rbody = e.read()
             headers = dict(e.info())
-        except (urllib2.URLError, ValueError), e:
+        except (urllib.error.URLError, ValueError) as e:
             self._handle_request_error(e)
-        lh = dict((k.lower(), v) for k, v in dict(headers).iteritems())
+        lh = {k.lower(): v for k, v in dict(headers).items()}
         return rbody, rcode, lh
 
     def _handle_request_error(self, e):
@@ -293,3 +158,5 @@ class Urllib2Client(HTTPClient):
                "If this problem persists, let us know at support@stripe.com.")
         msg = textwrap.fill(msg) + "\n\n(Network error: " + str(e) + ")"
         raise error.APIConnectionError(msg)
+
+

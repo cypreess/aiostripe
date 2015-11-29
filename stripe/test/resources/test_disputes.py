@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class DisputeTest(StripeResourceTest):
-
     def test_list_all_disputes(self):
         stripe.Dispute.all(created={'lt': NOW})
 

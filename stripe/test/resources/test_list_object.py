@@ -3,7 +3,6 @@ from stripe.test.helper import StripeApiTestCase
 
 
 class ListObjectTests(StripeApiTestCase):
-
     def setUp(self):
         super(ListObjectTests, self).setUp()
 
@@ -56,7 +55,6 @@ class ListObjectTests(StripeApiTestCase):
 
 
 class AutoPagingTests(StripeApiTestCase):
-
     def test_iter_one_page(self):
         lo = stripe.resource.ListObject.construct_from({
             'object': 'list',

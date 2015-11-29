@@ -3,7 +3,6 @@ from stripe.test.helper import StripeResourceTest
 
 
 class ReversalTest(StripeResourceTest):
-
     def test_fetch_reversal(self):
         transfer = stripe.Charge.construct_from({
             'id': 'tr_get',

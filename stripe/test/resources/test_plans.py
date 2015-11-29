@@ -5,7 +5,6 @@ from stripe.test.helper import (
 
 
 class PlanTest(StripeResourceTest):
-
     def test_create_plan(self):
         stripe.Plan.create(**DUMMY_PLAN)
 
