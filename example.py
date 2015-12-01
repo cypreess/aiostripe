@@ -3,20 +3,22 @@ import asyncio
 
 
 async def main():
-    aiostripe.api_key = 'tGN0bIwXnHdwOa85VABjPdSn8nWY7G7I'
+    aiostripe.api_key = 'sk_test_tow8DgveiQpQx7dtNbvC2hU5'
 
     print('Attempting charge...')
 
     resp = await aiostripe.Charge.create(
-        amount=200,
+        amount=1000,
         currency='usd',
         card={
             'number': '4242424242424242',
             'exp_month': 10,
-            'exp_year': 2014
+            'exp_year': 2016
         },
-        description='customer@gmail.com'
+        description='Hello from aiostripe!'
     )
+
+    print(resp.created)
 
     print('Success: %r' % (resp, ))
 
