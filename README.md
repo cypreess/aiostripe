@@ -1,4 +1,4 @@
-# Stripe Python bindings [![Build Status](https://travis-ci.org/stripe/stripe-python.svg?branch=master)](https://travis-ci.org/stripe/stripe-python)
+# Stripe Python bindings
 
 ## Installation
 
