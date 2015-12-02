@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_INVOICE_ITEM
 
@@ -55,3 +57,7 @@ class InvoiceTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('get', '/v1/invoices/upcoming',
                                                        {})
+
+
+if __name__ == '__main__':
+    unittest.main()

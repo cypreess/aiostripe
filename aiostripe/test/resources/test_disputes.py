@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_DISPUTE, NOW
 
@@ -50,3 +52,7 @@ class DisputeTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('post', '/v1/disputes/dp_close_id/close',
                                                        {}, {'Idempotency-Key': 'foo'})
+
+
+if __name__ == '__main__':
+    unittest.main()

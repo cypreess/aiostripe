@@ -18,7 +18,6 @@ aiostripe.egg-info/requires.txt
 aiostripe.egg-info/top_level.txt
 aiostripe/data/ca-certificates.crt
 aiostripe/test/__init__.py
-aiostripe/test/async_helper.py
 aiostripe/test/helper.py
 aiostripe/test/test_error.py
 aiostripe/test/test_http_client.py

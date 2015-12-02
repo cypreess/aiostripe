@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeApiTestCase, MyCreatable
 
@@ -30,3 +32,7 @@ class CreateableAPIResourceTests(StripeApiTestCase):
 
         self.assertTrue(isinstance(res, aiostripe.Charge))
         self.assertEqual('bar', res.foo)
+
+
+if __name__ == '__main__':
+    unittest.main()

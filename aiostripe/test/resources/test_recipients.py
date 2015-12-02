@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_CARD
 
@@ -57,3 +59,7 @@ class RecipientTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('delete', '/v1/recipients/rp_delete_card/cards/ca_delete_card',
                                                        {}, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

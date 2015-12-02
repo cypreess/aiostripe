@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -28,3 +30,7 @@ class OrderTest(StripeResourceTest):
         await order.pay()
 
         self.requestor_mock.request.assert_called_with('post', '/v1/orders/or_pay/pay', {}, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

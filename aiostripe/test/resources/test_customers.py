@@ -1,5 +1,6 @@
 import datetime
 import time
+import unittest
 
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_CARD, DUMMY_PLAN
@@ -104,6 +105,7 @@ class CustomerTest(StripeResourceTest):
             'id': 'btcrcv_update_source',
         }, 'api_key')
         source.name = 'The Best'
+
         await source.save(idempotency_key='foo')
 
         self.requestor_mock.request.assert_called_with('post',
@@ -171,24 +173,6 @@ class CustomerPlanTest(StripeResourceTest):
                                                            'plan': DUMMY_PLAN['id'],
                                                        }, None)
 
-    async def test_legacy_update_subscription(self):
-        customer = aiostripe.Customer(id='cus_legacy_sub_update')
-
-        await customer.update_subscription(idempotency_key='foo', plan=DUMMY_PLAN['id'])
-
-        self.requestor_mock.request.assert_called_with('post', '/v1/customers/cus_legacy_sub_update/subscription',
-                                                       {
-                                                           'plan': DUMMY_PLAN['id'],
-                                                       }, {'Idempotency-Key': 'foo'})
-
-    async def test_legacy_delete_subscription(self):
-        customer = aiostripe.Customer(id='cus_legacy_sub_delete')
-
-        await customer.cancel_subscription()
-
-        self.requestor_mock.request.assert_called_with('delete', '/v1/customers/cus_legacy_sub_delete/subscription',
-                                                       {}, None)
-
     async def test_create_customer_subscription(self):
         customer = aiostripe.Customer.construct_from({
             'id': 'cus_sub_create',
@@ -250,3 +234,7 @@ class CustomerPlanTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('delete', '/v1/customers/cus_foo/subscriptions/sub_delete',
                                                        {}, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

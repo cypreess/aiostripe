@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -45,3 +47,7 @@ class MetadataTest(StripeResourceTest):
                                                        {
                                                            'metadata': {'whole': None},
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

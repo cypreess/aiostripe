@@ -1,5 +1,6 @@
 import json
 import pickle
+import unittest
 
 import aiostripe
 from aiostripe.test.helper import StripeUnitTestCase, SAMPLE_INVOICE
@@ -147,3 +148,7 @@ class StripeObjectTests(StripeUnitTestCase):
 
         obj.refresh_from({'coupon': 'foo'}, api_key='bar', partial=True)
         self.assertEqual('foo', obj.coupon)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeApiTestCase
 
@@ -21,7 +23,7 @@ class ListObjectTests(StripeApiTestCase):
         self.assertTrue(isinstance(res[0], aiostripe.Charge))
         self.assertEqual('bar', res[0].foo)
 
-    def test_for_loop(self):
+    async def test_for_loop(self):
         seen = []
 
         for item in self.lo:
@@ -64,11 +66,13 @@ class AutoPagingTests(StripeApiTestCase):
 
         self.requestor_mock.request.assert_not_called()
 
-        seen = [item['id'] for item in lo.auto_paging_iter()]
+        seen = []
+        async for item in lo.auto_paging_iter():
+            seen.append(item['id'])
 
         self.assertEqual(['foo'], seen)
 
-    def test_iter_two_pages(self):
+    async def test_iter_two_pages(self):
         lo = aiostripe.resource.ListObject.construct_from({
             'object': 'list',
             'url': '/my/path',
@@ -83,14 +87,16 @@ class AutoPagingTests(StripeApiTestCase):
             'has_more': False,
         })
 
-        seen = [item['id'] for item in lo.auto_paging_iter()]
+        seen = []
+        async for item in lo.auto_paging_iter():
+            seen.append(item['id'])
 
         self.requestor_mock.request.assert_called_with('get', '/my/path',
                                                        {'starting_after': 'foo'}, None)
 
         self.assertEqual(['foo', 'bar'], seen)
 
-    def test_class_method_two_pages(self):
+    async def test_class_method_two_pages(self):
         self.mock_response({
             'object': 'list',
             'data': [{'id': 'bar'}],
@@ -98,9 +104,15 @@ class AutoPagingTests(StripeApiTestCase):
             'has_more': False,
         })
 
-        seen = [i['id'] for i in aiostripe.Charge.auto_paging_iter(limit=25)]
+        seen = []
+        async for i in aiostripe.Charge.auto_paging_iter(limit=25):
+            seen.append(i['id'])
 
         self.requestor_mock.request.assert_called_with('get', '/v1/charges',
                                                        {'limit': 25})
 
         self.assertEqual(['bar'], seen)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -157,7 +157,7 @@ class StripeObject(dict):
                 raise KeyError('%r.  HINT: The %r attribute was set in the past. It was then wiped when refreshing the '
                                'object with the result returned by Stripe\'s API, probably as a result of a save().  '
                                'The attributes currently available on this object are: %s' %
-                               (k, k, ', '.join(list(self.keys())))) from err
+                               (k, k, ', '.join(self.keys()))) from err
             else:
                 raise
 
@@ -178,9 +178,8 @@ class StripeObject(dict):
         self.api_key = api_key or getattr(values, 'api_key', None)
         self.stripe_account = stripe_account or getattr(values, 'stripe_account', None)
 
-        # Wipe old state before setting new.  This is useful for e.g.
-        # updating a customer, where there is no persistent card
-        # parameter.  Mark those values which don't persist as transient
+        # Wipe old state before setting new.  This is useful for e.g. updating a customer, where there is no persistent
+        # card parameter.  Mark those values which don't persist as transient
         if partial:
             self._unsaved_values = (self._unsaved_values - set(values))
         else:
@@ -192,7 +191,7 @@ class StripeObject(dict):
         self._transient_values = self._transient_values - set(values)
 
         for k, v in values.items():
-            super().__setitem__(k, convert_to_stripe_object(v, api_key, stripe_account))
+            super(StripeObject, self).__setitem__(k, convert_to_stripe_object(v, api_key, stripe_account))
 
         self._previous = values
 
@@ -234,7 +233,7 @@ class StripeObject(dict):
         unsaved_keys = self._unsaved_values or set()
         previous = previous or self._previous or {}
 
-        for k, v in list(self.items()):
+        for k, v in self.items():
             if k == 'id' or (isinstance(k, str) and k.startswith('_')):
                 continue
             elif isinstance(v, APIResource):
@@ -294,7 +293,8 @@ class ListObject(StripeObject):
     async def list(self, **kwargs):
         return await self.request('get', self['url'], kwargs)
 
-    async def auto_paging_iter(self, g):
+    @async_generator
+    async def auto_paging_iter(self):
         page = self
         params = dict(self._retrieve_params)
 
@@ -302,7 +302,7 @@ class ListObject(StripeObject):
             item_id = None
             for item in page:
                 item_id = item.get('id', None)
-                await g.async_yield(item)
+                await async_yield(item)
 
             if not getattr(page, 'has_more', False) or item_id is None:
                 return
@@ -344,8 +344,9 @@ class SingletonAPIResource(APIResource):
 # Classes of API operations
 class ListableAPIResource(APIResource):
     @classmethod
+    @async_generator
     async def auto_paging_iter(cls, *args, **kwargs):
-        return (await cls.list(*args, **kwargs)).auto_paging_iter()
+        return await async_yield_from((await cls.list(*args, **kwargs)).auto_paging_iter())
 
     @classmethod
     async def list(cls, api_key=None, idempotency_key=None, stripe_account=None, **kwargs):

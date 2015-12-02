@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_COUPON
 
@@ -5,6 +7,7 @@ from aiostripe.test.helper import StripeResourceTest, DUMMY_COUPON
 class CouponTest(StripeResourceTest):
     async def test_create_coupon(self):
         await aiostripe.Coupon.create(**DUMMY_COUPON)
+
         self.requestor_mock.request.assert_called_with('post', '/v1/coupons',
                                                        DUMMY_COUPON, None)
 
@@ -38,3 +41,7 @@ class CouponTest(StripeResourceTest):
         await customer.delete_discount()
 
         self.requestor_mock.request.assert_called_with('delete', '/v1/customers/cus_delete_discount/discount')
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -31,6 +31,9 @@ class uniondict(dict):
         self.overlay = overlay
         self.whiteouts = whiteouts
 
+        # sometimes python internals bypass all these mechanisms, so this is necessary evil
+        super().update(self.copy())
+
     def __locate_key(self, key):
         if key in self.whiteouts:
             return 'whiteouts'
@@ -45,6 +48,7 @@ class uniondict(dict):
         return None
 
     def __getitem__(self, key):
+        # print('$$$$$$$$$$', key)
         value = self.get(key, _missing)
 
         if value is _missing:

@@ -2,25 +2,11 @@ import asyncio
 import builtins
 import sys
 import types
-from functools import update_wrapper
 
+from coroutils.helpers import update_wrapper, to_exception
 from uniondict import uniondict
 
 _missing = object()
-
-
-def _to_exception(exc_type, exc_value=None, exc_tb=None):
-    if isinstance(exc_type, BaseException):
-        exc_value = exc_type
-        exc_type = type(exc_value)
-
-    if exc_value is None:
-        exc_value = exc_type()
-
-    if exc_tb is not None:
-        exc_value = exc_value.with_traceback(exc_tb)
-
-    return exc_value
 
 
 def aiter(obj, sentinel=_missing):
@@ -61,11 +47,15 @@ async def anext(iterator, default=_missing):
 
 
 class asyncgenerator(object):
-    def __init__(self, coro, loop=None):
-        self.__name__ = coro.__name__
-        self.__coro = self.__wrap(coro)
+    def __init__(self, func, args, kwargs, loop=None):
+        self.__name__ = func.__name__
+        self.__qualname__ = func.__qualname__
+
+        self.__func = self.__wrap(func, args, kwargs)
+        self.__coro = None
         self.__future = None
 
+        # self.__inherited_excinfo = None
         self.__loop = loop
 
         self.__started = False
@@ -74,23 +64,19 @@ class asyncgenerator(object):
         self.__queue_send = asyncio.Queue(maxsize=1)
         self.__queue_yield = asyncio.Queue(maxsize=1)
 
-    def __wrap(self, coro):
+    def __wrap(self, func, args, kwargs):
         async def inner():
             try:
-                value = await coro
-            except BaseException as _e:
-                exc = _to_exception(*sys.exc_info())
+                value = await func(*args, **kwargs)
+            except:
+                exc = to_exception(*sys.exc_info())
             else:
                 exc = StopAsyncIteration(value)
 
             self.__finished = True
             await self.__queue_yield.put((None, exc))
 
-        # TODO: update source location information as well
-        inner.__name__ = coro.__name__
-        inner.__qualname__ = coro.__qualname__
-
-        return inner()
+        return update_wrapper(inner, func)
 
     async def __send(self, arg, exc):
         if not self.__started:
@@ -104,8 +90,10 @@ class asyncgenerator(object):
                 raise exc
 
             self.__started = True
+            self.__coro = self.__func()
             self.__future = asyncio.ensure_future(self.__coro, loop=self.__loop)
         else:
+            # self.__inherited_excinfo = None  # tracebacks prevent gc
             if self.__finished:
                 if exc is not None:
                     raise exc
@@ -114,7 +102,6 @@ class asyncgenerator(object):
 
             await self.__queue_send.put((arg, exc))
 
-        print('sent %r' % ((arg, exc), ))
         r_value, r_exc = await self.__queue_yield.get()
 
         if r_exc is not None:
@@ -126,7 +113,7 @@ class asyncgenerator(object):
         return await self.__send(arg, None)
 
     async def throw(self, exc_type, exc_value=None, exc_tb=None):
-        exc = _to_exception(exc_type, exc_value, exc_tb)
+        exc = to_exception(exc_type, exc_value, exc_tb)
 
         return await self.__send(None, exc)
 
@@ -137,6 +124,9 @@ class asyncgenerator(object):
             pass
         else:
             raise RuntimeError('async generator ignored GeneratorExit')
+
+        if self.__coro is not None:
+            self.__coro.close()
 
     async def __aiter__(self):
         return self
@@ -153,13 +143,13 @@ class asyncgenerator(object):
         await self.__queue_yield.put((args, None))
 
         value, exc = await self.__queue_send.get()
+
         if exc is not None:
             raise exc
 
         return value
 
     async def _agi_yield_from(self, iterator):
-        print('heeey')
         iterator = aiter(iterator)
 
         while True:
@@ -198,10 +188,12 @@ def asyncgeneratorfunction(func):
         ns = uniondict(builtins.__dict__, func.__globals__)
         ns['async_yield'] = async_yield
         ns['async_yield_from'] = async_yield_from
+        ns['__builtins__'] = builtins.__dict__
 
         hooked_func = types.FunctionType(func.__code__, ns, func.__name__, func.__defaults__, func.__closure__)
+        hooked_func = update_wrapper(hooked_func, func)
 
-        gen = asyncgenerator(hooked_func(*args, **kwargs))
+        gen = asyncgenerator(hooked_func, args, kwargs)
 
         return gen
 
@@ -209,6 +201,17 @@ def asyncgeneratorfunction(func):
 
 
 async_generator = asyncgeneratorfunction
-__all__ = ['async_generator']
 
-from coroutils.helpers import aiter_sentinel
+
+# late binding
+@async_generator
+async def aiter_sentinel(func, sentinel):
+    while True:
+        value = await func()
+        if value == sentinel:
+            return
+
+        await async_yield(value)
+
+
+__all__ = ['async_generator', 'aiter', 'anext']

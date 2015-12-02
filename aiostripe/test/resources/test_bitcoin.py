@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -102,3 +104,7 @@ class BitcoinReceiverTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('get', '/v1/bitcoin/receivers/btcrcv_foo/transactions',
                                                        {}, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

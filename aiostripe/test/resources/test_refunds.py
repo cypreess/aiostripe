@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -76,7 +78,10 @@ class ChargeRefundTest(StripeResourceTest):
 
         await charge.save()
 
-        self.requestor_mock.request.assert_not_called()
+        self.requestor_mock.request.assert_called_with('post', '/v1/charges/ch_nested_update/refunds',
+                                                       {}, None)
+
+        # self.requestor_mock.request.assert_not_called()
 
     async def test_fetch_refund(self):
         charge = aiostripe.Charge.construct_from({
@@ -121,3 +126,7 @@ class ChargeRefundTest(StripeResourceTest):
                                                                'key': 'value',
                                                            }
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

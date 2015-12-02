@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -55,3 +57,7 @@ class ApplicationFeeRefundTest(StripeResourceTest):
                                                                'key': 'value',
                                                            }
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

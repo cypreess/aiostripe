@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -16,3 +18,7 @@ class BalanceTransactionTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('get', '/v1/balance/history',
                                                        {})
+
+
+if __name__ == '__main__':
+    unittest.main()

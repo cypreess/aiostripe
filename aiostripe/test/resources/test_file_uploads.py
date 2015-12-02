@@ -1,4 +1,5 @@
 import tempfile
+import unittest
 
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
@@ -31,3 +32,7 @@ class FileUploadTest(StripeResourceTest):
 
         self.requestor_mock.request.assert_called_with('get', '/v1/files',
                                                        {})
+
+
+if __name__ == '__main__':
+    unittest.main()

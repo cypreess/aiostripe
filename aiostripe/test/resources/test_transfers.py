@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -13,3 +15,7 @@ class TransferTest(StripeResourceTest):
         await transfer.cancel()
 
         self.requestor_mock.request.assert_called_with('post', '/v1/transfers/tr_cancel/cancel', {}, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

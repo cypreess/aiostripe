@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, DUMMY_PLAN
 
@@ -27,3 +29,7 @@ class PlanTest(StripeResourceTest):
                                                        {
                                                            'name': 'Plan Name',
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

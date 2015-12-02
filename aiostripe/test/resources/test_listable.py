@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeApiTestCase, MyListable
 
@@ -23,3 +25,7 @@ class ListableAPIResourceTests(StripeApiTestCase):
         self.assertTrue(all(isinstance(obj, aiostripe.Charge) for obj in res))
         self.assertEqual('jose', res[0].name)
         self.assertEqual('curly', res[1].name)
+
+
+if __name__ == '__main__':
+    unittest.main()

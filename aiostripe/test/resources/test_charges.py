@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest, NOW, DUMMY_CHARGE
 
@@ -68,3 +70,7 @@ class ChargeTest(StripeResourceTest):
                                                            'currency': 'usd',
                                                            'source': 'btcrcv_test_receiver'
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

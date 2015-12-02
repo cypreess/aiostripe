@@ -1,3 +1,5 @@
+import unittest
+
 from aiostripe.test.helper import StripeApiTestCase, MyDeletable
 
 
@@ -16,3 +18,7 @@ class DeletableAPIResourceTests(StripeApiTestCase):
 
         self.assertEqual(True, obj.deleted)
         self.assertEqual('mid', obj.id)
+
+
+if __name__ == '__main__':
+    unittest.main()

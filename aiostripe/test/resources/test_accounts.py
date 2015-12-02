@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeResourceTest
 
@@ -86,3 +88,7 @@ class AccountTest(StripeResourceTest):
                                                                },
                                                            },
                                                        }, None)
+
+
+if __name__ == '__main__':
+    unittest.main()

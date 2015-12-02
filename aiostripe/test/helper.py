@@ -9,7 +9,7 @@ from unittest.mock import patch
 import aiostripe
 from aiostripe.resource import APIResource, SingletonAPIResource, ListableAPIResource, CreateableAPIResource, \
     UpdateableAPIResource, DeletableAPIResource
-from coroutils.async_test import AsyncTestCaseMeta, AsyncMock, Mock, deasyncify
+from coroutils.async_test import AsyncTestCase, AsyncMock, Mock, deasyncify
 
 NOW = datetime.datetime.now()
 
@@ -177,7 +177,7 @@ class StripeApiTestCase(StripeTestCase):
         self.requestor_patcher.stop()
 
     def mock_response(self, res):
-        self.requestor_mock.request = Mock(return_value=(res, 'reskey'))
+        self.requestor_mock.request = AsyncMock(return_value=(res, 'reskey'))
 
 
 class StripeResourceTest(StripeApiTestCase):

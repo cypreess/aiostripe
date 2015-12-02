@@ -1,3 +1,5 @@
+import unittest
+
 import aiostripe
 from aiostripe.test.helper import StripeApiTestCase, MyResource, MySingleton
 
@@ -78,3 +80,7 @@ class SingletonAPIResourceTests(StripeApiTestCase):
                                                        {}, None)
 
         self.assertEqual('ton', res.single)
+
+
+if __name__ == '__main__':
+    unittest.main()
