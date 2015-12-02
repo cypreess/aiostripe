@@ -9,7 +9,7 @@ from unittest.mock import patch
 import aiostripe
 from aiostripe.resource import APIResource, SingletonAPIResource, ListableAPIResource, CreateableAPIResource, \
     UpdateableAPIResource, DeletableAPIResource
-from aiostripe.test.async_helper import AsyncTestCaseMeta, AsyncMock, Mock, deasyncify
+from coroutils.async_test import AsyncTestCaseMeta, AsyncMock, Mock, deasyncify
 
 NOW = datetime.datetime.now()
 
@@ -118,7 +118,7 @@ SAMPLE_INVOICE = json.loads('''
 ''')
 
 
-class StripeTestCase(unittest.TestCase, metaclass=AsyncTestCaseMeta):
+class StripeTestCase(AsyncTestCase):
     RESTORE_ATTRIBUTES = ('api_version', 'api_key')
 
     def setUp(self):
@@ -140,10 +140,6 @@ class StripeTestCase(unittest.TestCase, metaclass=AsyncTestCaseMeta):
 
         for attr in self.RESTORE_ATTRIBUTES:
             setattr(aiostripe, attr, self._stripe_original_attributes[attr])
-
-    async def assertRaisesAsync(self, exception, coro, *args, **kwargs):
-        with self.assertRaises(exception):
-            await coro(*args, **kwargs)
 
 
 class StripeUnitTestCase(StripeTestCase):

@@ -34,7 +34,7 @@ setup(
     install_requires=install_requires,
     test_suite='aiostripe.test.all',
     tests_require=[],
-    use_2to3=True,
+    # use_2to3=True,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

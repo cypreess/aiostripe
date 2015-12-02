@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import inspect
+from unittest import TestCase
 from unittest import mock
 
 
@@ -28,6 +29,16 @@ class AsyncTestCaseMeta(type):
         return super().__new__(mcs, what, bases, ns)
 
 
+class AsyncTestCase(TestCase, metaclass=AsyncTestCaseMeta):
+    async def assertRaisesAsync(self, exception, coro, *args, **kwargs):
+        with self.assertRaises(exception):
+            await coro(*args, **kwargs)
+
+    async def assertRaisesRegexAsync(self, exception, regex, coro, *args, **kwargs):
+        with self.assertRaisesRegex(exception, regex):
+            await coro(*args, **kwargs)
+
+
 class AwaitableMixin:
     async def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
@@ -40,3 +51,5 @@ class Mock(mock.Mock):
 class AsyncMock(AwaitableMixin, Mock):
     pass
 
+
+__all__ = ['deasyncify', 'AsyncTestCaseMeta', 'Mock', 'AsyncMock']

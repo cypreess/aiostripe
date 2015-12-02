@@ -3,6 +3,7 @@ from urllib.parse import quote_plus
 
 from aiostripe import api_requestor, error, upload_api_base
 from aiostripe.logger import logger
+from coroutils.generator import async_generator
 
 
 def convert_to_stripe_object(resp, api_key, account):
@@ -293,7 +294,7 @@ class ListObject(StripeObject):
     async def list(self, **kwargs):
         return await self.request('get', self['url'], kwargs)
 
-    def auto_paging_iter(self):
+    async def auto_paging_iter(self, g):
         page = self
         params = dict(self._retrieve_params)
 
@@ -301,13 +302,13 @@ class ListObject(StripeObject):
             item_id = None
             for item in page:
                 item_id = item.get('id', None)
-                yield item
+                await g.async_yield(item)
 
             if not getattr(page, 'has_more', False) or item_id is None:
                 return
 
             params['starting_after'] = item_id
-            page = self.list(**params)
+            page = await self.list(**params)
 
     async def create(self, idempotency_key=None, **kwargs):
         headers = populate_headers(idempotency_key)
@@ -391,9 +392,9 @@ class DeletableAPIResource(APIResource):
 # API objects
 class Account(CreateableAPIResource, ListableAPIResource, UpdateableAPIResource, DeletableAPIResource):
     @classmethod
-    def retrieve(cls, id=None, api_key=None, **kwargs):
+    async def retrieve(cls, id=None, api_key=None, **kwargs):
         instance = cls(id, api_key, **kwargs)
-        instance.refresh()
+        await instance.refresh()
 
         return instance
 

@@ -29,24 +29,24 @@ class ListObjectTests(StripeApiTestCase):
 
         self.assertEqual(['foo'], seen)
 
-    def test_list(self):
-        res = self.lo.list(myparam='you')
+    async def test_list(self):
+        res = await self.lo.list(myparam='you')
 
         self.requestor_mock.request.assert_called_with('get', '/my/path',
                                                        {'myparam': 'you'}, None)
 
         self.assertResponse(res)
 
-    def test_create(self):
-        res = self.lo.create(myparam='eter')
+    async def test_create(self):
+        res = await self.lo.create(myparam='eter')
 
         self.requestor_mock.request.assert_called_with('post', '/my/path',
                                                        {'myparam': 'eter'}, None)
 
         self.assertResponse(res)
 
-    def test_retrieve(self):
-        res = self.lo.retrieve('myid', myparam='cow')
+    async def test_retrieve(self):
+        res = await self.lo.retrieve('myid', myparam='cow')
 
         self.requestor_mock.request.assert_called_with('get', '/my/path/myid',
                                                        {'myparam': 'cow'}, None)
@@ -55,7 +55,7 @@ class ListObjectTests(StripeApiTestCase):
 
 
 class AutoPagingTests(StripeApiTestCase):
-    def test_iter_one_page(self):
+    async def test_iter_one_page(self):
         lo = aiostripe.resource.ListObject.construct_from({
             'object': 'list',
             'url': '/my/path',
