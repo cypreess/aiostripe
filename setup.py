@@ -29,7 +29,7 @@ setup(
     author='Stripe',
     author_email='support@stripe.com',
     url='https://github.com/stripe/stripe-python',
-    packages=['aiostripe', 'aiostripe.test'],
+    packages=['aiostripe', 'aiostripe.test', 'coroutils', 'uniondict'],
     package_data={'aiostripe': ['data/ca-certificates.crt']},
     install_requires=install_requires,
     test_suite='aiostripe.test.all',
